@@ -17,6 +17,7 @@ static const char instropection_xml[] =
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='pkgtype' direction='in'/>"
 	"      <arg type='s' name='pkgpath' direction='in'/>"
+	"      <arg type='s' name='args' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
@@ -118,26 +119,75 @@ static char *__generate_reqkey(const char *pkgid)
 	return str_req_key;
 }
 
+char *__get_tep_path_from_args(char *args)
+{
+	if (args == NULL)
+		return NULL;
+
+	gboolean ret_parse;
+	gint argcp;
+	gchar **argvp;
+	GError *gerr = NULL;
+	int i = 0;
+	char *tep_path = NULL;
+
+	ret_parse = g_shell_parse_argv(args, &argcp, &argvp, &gerr);
+	if (ret_parse == false) {
+		ERR("failed to parse args [%s]", args);
+		return NULL;
+	}
+
+	for(i = 0; i < argcp; i++) {
+		if (strcmp(argvp[i], "-e") == 0) {
+			if (argvp[++i] != NULL) {
+				tep_path = strdup(argvp[i]);
+				return tep_path;
+			} else
+				return NULL;
+		}
+	}
+
+	return NULL;
+}
+
 static int __handle_request_install(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
 	char *pkgtype = NULL;
 	char *pkgpath = NULL;
+	char *args = NULL;
 	char *reqkey;
+	char *tep_path = NULL;
 
-	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgpath);
-	if (target_uid == (uid_t)-1 || pkgtype == NULL || pkgpath == NULL) {
+	g_variant_get(parameters, "(u&s&s&s)", &target_uid, &pkgtype, &pkgpath, &args);
+	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		return -1;
 	}
 
-	reqkey = __generate_reqkey(pkgpath);
+	if (pkgpath == NULL) {
+		tep_path = __get_tep_path_from_args(args);
+		if (tep_path == NULL) {
+			g_dbus_method_invocation_return_value(invocation,
+					g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+			return -1;
+		}
+	}
+
+	if (pkgpath)
+		reqkey = __generate_reqkey(pkgpath);
+	else
+		reqkey = __generate_reqkey(tep_path);
+
+	if (tep_path)
+		free(tep_path);
+
 	if (reqkey == NULL)
 		return -1;
 	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_INSTALL, pkgtype,
-				pkgpath, "")) {
+				pkgpath, args)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
 		free(reqkey);
