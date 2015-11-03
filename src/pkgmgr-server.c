@@ -691,6 +691,7 @@ static char **__generate_argv(const char *args)
 static void __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
 {
 	user_ctx* user_context = get_user_context(uid);
+
 	if(!user_context) {
 		DBG("Failed to getenv for the user : %d", uid);
 		exit(1);
@@ -702,6 +703,7 @@ static void __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
 	free_user_context(user_context);
 
 	/* Execute backend !!! */
+
 	int ret = execv(cmd, argv);
 
 	/* Code below: exec failure. Should not be happened! */
@@ -719,14 +721,18 @@ static void __process_install(pm_dbus_msg *item)
 {
 	char *backend_cmd;
 	char **args_vector;
-	char args[MAX_PKG_ARGS_LEN];
+	char args[MAX_PKG_ARGS_LEN] = {'\0', };
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
 		return;
 
-	snprintf(args, sizeof(args), "%s -k %s -i %s", backend_cmd,
-			item->req_id, item->pkgid);
+	if (item->pkgid[0] == '\0')
+		snprintf(args, sizeof(args), "%s -k %s %s", backend_cmd, item->req_id, item->args);
+	else
+   	snprintf(args, sizeof(args), "%s -k %s -i %s %s", backend_cmd,
+			item->req_id, item->pkgid, item->args);
+
 	args_vector = __generate_argv(args);
 	args_vector[0] = backend_cmd;
 
@@ -906,8 +912,12 @@ gboolean queue_job(void *data)
 	DBG("saved queue status. Now try fork()");
 	/*save pkg type and pkg name for future*/
 	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
-	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
+	if (strlen(item->pkgid) > 0)
+		strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
+	else
+		ptr->pkgid[0] = '\0';
 	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
+
 	ptr->uid = item->uid;
 	ptr->pid = fork();
 	DBG("child forked [%d] for request type [%d]", ptr->pid, item->req_type);
