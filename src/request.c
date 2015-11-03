@@ -17,6 +17,7 @@ static const char instropection_xml[] =
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='pkgtype' direction='in'/>"
 	"      <arg type='s' name='pkgpath' direction='in'/>"
+	"      <arg type='as' name='args' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
@@ -124,31 +125,84 @@ static int __handle_request_install(uid_t uid,
 	uid_t target_uid = (uid_t)-1;
 	char *pkgtype = NULL;
 	char *pkgpath = NULL;
-	char *reqkey;
+	char *args = NULL;
+	char *reqkey = NULL;
+	char *tep_path = NULL;
+	gchar **tmp_args = NULL;
+	gsize args_count;
+	int ret = -1;
+	GVariant *value;
+	gchar *str;
+	int i = 0;
+	int len = 0;
 
-	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgpath);
-	if (target_uid == (uid_t)-1 || pkgtype == NULL || pkgpath == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
-		return -1;
+	g_variant_get(parameters, "(u&s&s@as)", &target_uid, &pkgtype, &pkgpath, &value);
+	tmp_args = (gchar **)g_variant_get_strv(value, &args_count);
+
+	for (i = 0; i < args_count; i++)
+		len = len + strlen(tmp_args[i]) + 1;
+
+	args = (char *)calloc(len, sizeof(char));
+	if (args == NULL) {
+		ERR("calloc failed");
+		ret =  -1;
+		goto catch;
 	}
 
-	reqkey = __generate_reqkey(pkgpath);
-	if (reqkey == NULL)
-		return -1;
+	for (i = 0; i < args_count; i++) {
+		strncat(args, tmp_args[i], strlen(tmp_args[i]));
+		if (pkgpath == NULL && strcmp(tmp_args[i], "-e") == 0) {
+			if (i + i < args_count)
+				tep_path = tmp_args[i + 1];
+		}
+		strncat(args, " ", strlen(" "));
+	}
+
+	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	if (pkgpath == NULL && tep_path == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	if (pkgpath)
+		reqkey = __generate_reqkey(pkgpath);
+	else
+		reqkey = __generate_reqkey(tep_path);
+
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
 	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_INSTALL, pkgtype,
-				pkgpath, "")) {
+				pkgpath, args)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
-		free(reqkey);
-		return -1;
+		ret = -1;
+		goto catch;
 	}
 
 	g_dbus_method_invocation_return_value(invocation,
 			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
-	free(reqkey);
 
-	return 0;
+	ret = 0;
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	if (args)
+		free(args);
+
+	return ret;
 }
 
 static int __handle_request_reinstall(uid_t uid,
