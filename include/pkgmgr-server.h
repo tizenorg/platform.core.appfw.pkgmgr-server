@@ -77,6 +77,7 @@ typedef struct backend_info_t {
 char *_get_backend_cmd(char *type);
 
 gboolean queue_job(void *data);
+int __return_value_to_caller(const char *req_key, GVariant *result);
 int __init_request_handler(void);
 void __fini_request_handler(void);
 

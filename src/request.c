@@ -95,6 +95,7 @@ static const char instropection_xml[] =
 static GDBusNodeInfo *instropection_data;
 static guint reg_id;
 static guint owner_id;
+static GHashTable *req_table;
 
 static char *__generate_reqkey(const char *pkgid)
 {
@@ -553,6 +554,23 @@ static void __handle_method_call(GDBusConnection *connection,
 		g_idle_add(queue_job, NULL);
 }
 
+int __return_value_to_caller(const char *req_key, GVariant *result)
+{
+	GDBusMethodInvocation *invocation;
+
+	invocation = (GDBusMethodInvocation *)g_hash_table_lookup(req_table,
+			(gpointer)req_key);
+	if (invocation == NULL) {
+		ERR("no such request id");
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation, result);
+	g_hash_table_remove(req_table, (gpointer)req_key);
+
+	return 0;
+}
+
 static const GDBusInterfaceVTable interface_vtable =
 {
 	__handle_method_call,
@@ -598,11 +616,17 @@ int __init_request_handler(void)
 			G_BUS_NAME_OWNER_FLAGS_NONE, __on_bus_acquired,
 			__on_name_acquired, __on_name_lost, NULL, NULL);
 
+	req_table = g_hash_table_new_full(g_str_hash, g_str_equal,
+			free, NULL);
+	if (req_table == NULL)
+		return -1;
+
 	return 0;
 }
 
 void __fini_request_handler(void)
 {
+	g_hash_table_destroy(req_table);
 	g_bus_unown_name(owner_id);
 	g_dbus_node_info_unref(instropection_data);
 }
