@@ -18,5 +18,8 @@
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="clearcache" privilege="http://tizen.org/privilege/packagemanager.clearcache"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="kill" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="check" privilege="http://tizen.org/privilege/packagemanager.info"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="generate_license_request" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="register_license" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="decrypt_package" privilege="http://tizen.org/privilege/packagemanager.admin"/>
         </policy>
 </busconfig>
