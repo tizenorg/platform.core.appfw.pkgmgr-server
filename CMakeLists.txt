@@ -25,6 +25,7 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		pkgmgr-parser
 		pkgmgr-info
 		libtzplatform-config
+		drm-service-core-tizen
 		pkgmgr)
 FOREACH(SERVER_FLAGS ${SERVER_DEPS_CFLAGS})
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SERVER_FLAGS}")
