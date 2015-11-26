@@ -40,6 +40,7 @@
 #include <pkgmgr-info.h>
 #include <pkgmgr/pkgmgr_parser.h>
 #include <tzplatform_config.h>
+#include <drm-tizen-apps.h>
 
 #include "pkgmgr_installer.h"
 #include "pkgmgr-server.h"
@@ -880,6 +881,75 @@ static void __process_check(pm_dbus_msg *item)
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 }
 
+static void __process_generate_license_request(pm_dbus_msg *item)
+{
+	int ret;
+	char *resp_data;
+	char req_data[MAX_PKG_ARGS_LEN];
+	unsigned int req_data_len;
+	char license_url[MAX_PKG_ARGS_LEN];
+	unsigned int license_url_len;
+
+	resp_data = item->args;
+	req_data_len = sizeof(req_data);
+	license_url_len = sizeof(license_url_len);
+
+	ret = drm_tizen_generate_license_request(resp_data, strlen(resp_data),
+			req_data, &req_data_len, license_url, &license_url_len);
+	if (ret != TADC_SUCCESS) {
+		ERR("drm_tizen_generate_license_request failed: %d", ret);
+		__return_value_to_caller(item->req_id, g_variant_new("(iss)",
+					PKGMGR_R_ESYSTEM, "", ""));
+		return;
+	}
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(iss)", PKGMGR_R_OK, req_data,
+				license_url));
+}
+
+static void __process_register_license(pm_dbus_msg *item)
+{
+	int ret;
+	char *resp_data;
+
+	resp_data = item->args;
+
+	ret = drm_tizen_register_license(resp_data, strlen(resp_data));
+	if (ret != TADC_SUCCESS) {
+		ERR("drm_tizen_register_license failed: %d", ret);
+		__return_value_to_caller(item->req_id,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return;
+	}
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", PKGMGR_R_OK));
+}
+
+static void __process_decrypt_license(pm_dbus_msg *item)
+{
+	int ret;
+	char *drm_file_path;
+	char *decrypted_file_path;
+
+	drm_file_path = item->pkgid;
+	decrypted_file_path = item->args;
+
+	/* TODO: check ownership of decrypted file */
+	ret = drm_tizen_decrypt_package(drm_file_path, strlen(drm_file_path),
+			decrypted_file_path, strlen(decrypted_file_path));
+	if (ret != TADC_SUCCESS) {
+		ERR("drm_tizen_register_license failed: %d", ret);
+		__return_value_to_caller(item->req_id,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return;
+	}
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", PKGMGR_R_OK));
+}
+
 gboolean queue_job(void *data)
 {
 	pm_dbus_msg *item = NULL;
@@ -951,6 +1021,15 @@ gboolean queue_job(void *data)
 			break;
 		case PKGMGR_REQUEST_TYPE_CHECK:
 			__process_check(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST:
+			__process_generate_license_request(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_REGISTER_LICENSE:
+			__process_register_license(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_DECRYPT_LICENSE:
+			__process_decrypt_license(item);
 			break;
 		}
 		/* exit child */

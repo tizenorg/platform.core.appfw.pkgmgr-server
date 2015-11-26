@@ -90,6 +90,21 @@ static const char instropection_xml[] =
 	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
+	"    <method name='generate_license_request'>"
+	"      <arg type='s' name='resp_data' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='req_data' direction='out'/>"
+	"      <arg type='s' name='license_url' direction='out'/>"
+	"    </method>"
+	"    <method name='register_license'>"
+	"      <arg type='s' name='resp_data' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='decrypt_license'>"
+	"      <arg type='s' name='drm_file_path' direction='in'/>"
+	"      <arg type='s' name='decrypted_file_path' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"</node>";
 static GDBusNodeInfo *instropection_data;
@@ -489,6 +504,116 @@ static int __handle_request_check(uid_t uid,
 	return 0;
 }
 
+static int __handle_request_generate_license_request(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	char *reqkey;
+	char *resp_data = NULL;
+
+	g_variant_get(parameters, "(&s)", &resp_data);
+	if (resp_data == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(iss)", PKGMGR_R_ECOMM, "", ""));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("drm");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(iss)", PKGMGR_R_ENOMEM, "",
+					""));
+		return -1;
+	}
+
+	if (_pm_queue_push(uid, reqkey,
+				PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST,
+				"pkg", "", resp_data)) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(iss)", PKGMGR_R_ESYSTEM, "",
+					""));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
+static int __handle_request_register_license(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	char *reqkey;
+	char *resp_data = NULL;
+
+	g_variant_get(parameters, "(&s)", &resp_data);
+	if (resp_data == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("drm");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ENOMEM));
+		return -1;
+	}
+
+	if (_pm_queue_push(uid, reqkey, PKGMGR_REQUEST_TYPE_REGISTER_LICENSE,
+				"pkg", "", resp_data)) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
+static int __handle_request_decrypt_license(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	char *reqkey;
+	char *drm_file_path = NULL;
+	char *decrypted_file_path = NULL;
+
+	g_variant_get(parameters, "(&s&s)", &drm_file_path,
+			&decrypted_file_path);
+	if (drm_file_path == NULL || decrypted_file_path == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("drm");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ENOMEM));
+		return -1;
+	}
+
+	if (_pm_queue_push(uid, reqkey, PKGMGR_REQUEST_TYPE_DECRYPT_LICENSE,
+				"pkg", drm_file_path, decrypted_file_path)) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
 static uid_t __get_caller_uid(GDBusConnection *connection, const char *name)
 {
 	GError *err = NULL;
@@ -547,6 +672,15 @@ static void __handle_method_call(GDBusConnection *connection,
 		ret = __handle_request_kill(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "check") == 0)
 		ret = __handle_request_check(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "generate_license_request") == 0)
+		ret = __handle_request_generate_license_request(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "register_license") == 0)
+		ret = __handle_request_register_license(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "decrypt_license") == 0)
+		ret = __handle_request_decrypt_license(uid, invocation,
+				parameters);
 	else
 		ret = -1;
 
