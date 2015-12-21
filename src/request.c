@@ -35,6 +35,13 @@ static const char instropection_xml[] =
 	"      <arg type='i' name='ret' direction='out'/>"
 	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
+	"    <method name='direct_manifest_install'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgtype' direction='in'/>"
+	"      <arg type='s' name='pkgpath' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
+	"    </method>"
 	"    <method name='move'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='pkgtype' direction='in'/>"
@@ -276,6 +283,59 @@ static int __handle_request_uninstall(uid_t uid,
 	free(reqkey);
 
 	return 0;
+}
+
+static int __handle_request_direct_manifest_install(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgtype = NULL;
+	char *pkgid = NULL;
+	char *reqkey = NULL;
+	int ret = -1;
+
+	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgid);
+
+	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	if (pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	reqkey = __generate_reqkey(pkgid);
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DIRECT_MANIFEST_INSTALL, pkgtype,
+				pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
+
+	ret = 0;
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
 }
 
 static int __handle_request_move(uid_t uid,
@@ -656,6 +716,8 @@ static void __handle_method_call(GDBusConnection *connection,
 		ret = __handle_request_reinstall(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "uninstall") == 0)
 		ret = __handle_request_uninstall(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "direct_manifest_install") == 0)
+		ret = __handle_request_direct_manifest_install(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "cleardata") == 0)
 		ret = __handle_request_cleardata(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "move") == 0)
