@@ -772,6 +772,24 @@ static void __process_uninstall(pm_dbus_msg *item)
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
 }
 
+static void __process_direct_manifest_install(pm_dbus_msg *item)
+{
+	char *backend_cmd;
+	char **args_vector;
+	char args[MAX_PKG_ARGS_LEN];
+
+	backend_cmd = _get_backend_cmd(item->pkg_type);
+	if (backend_cmd == NULL)
+		return;
+
+	snprintf(args, sizeof(args), "%s -k %s -y %s", backend_cmd,
+			item->req_id, item->pkgid);
+	args_vector = __generate_argv(args);
+	args_vector[0] = backend_cmd;
+
+	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+}
+
 static void __process_move(pm_dbus_msg *item)
 {
 	char *backend_cmd;
@@ -927,6 +945,9 @@ gboolean queue_job(void *data)
 			break;
 		case PKGMGR_REQUEST_TYPE_UNINSTALL:
 			__process_uninstall(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_DIRECT_MANIFEST_INSTALL:
+			__process_direct_manifest_install(item);
 			break;
 		case PKGMGR_REQUEST_TYPE_MOVE:
 			__process_move(item);
