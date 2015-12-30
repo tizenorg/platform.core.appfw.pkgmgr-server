@@ -735,6 +735,9 @@ static void __process_install(pm_dbus_msg *item)
 	args_vector[0] = backend_cmd;
 
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+
+	free(backend_cmd);
+	free(args_vector);
 }
 
 static void __process_reinstall(pm_dbus_msg *item)
@@ -753,6 +756,9 @@ static void __process_reinstall(pm_dbus_msg *item)
 	args_vector[0] = backend_cmd;
 
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+
+	free(backend_cmd);
+	free(args_vector);
 }
 
 static void __process_uninstall(pm_dbus_msg *item)
@@ -771,6 +777,9 @@ static void __process_uninstall(pm_dbus_msg *item)
 	args_vector[0] = backend_cmd;
 
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+
+	free(backend_cmd);
+	free(args_vector);
 }
 
 static void __process_move(pm_dbus_msg *item)
@@ -790,6 +799,9 @@ static void __process_move(pm_dbus_msg *item)
 	args_vector[0] = backend_cmd;
 
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+
+	free(backend_cmd);
+	free(args_vector);
 }
 
 static void __process_enable(pm_dbus_msg *item)
@@ -811,6 +823,8 @@ static void __process_getsize(pm_dbus_msg *item)
 			item->req_id);
 	args_vector = __generate_argv(args);
 	__exec_with_arg_vector("/usr/bin/pkg_getsize", args_vector, item->uid);
+
+	free(args_vector);
 }
 
 static void __process_cleardata(pm_dbus_msg *item)
@@ -830,6 +844,9 @@ static void __process_cleardata(pm_dbus_msg *item)
 	args_vector[0] = backend_cmd;
 
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+
+	free(backend_cmd);
+	free(args_vector);
 }
 
 static void __process_clearcache(pm_dbus_msg *item)
@@ -841,6 +858,8 @@ static void __process_clearcache(pm_dbus_msg *item)
 	args_vector = __generate_argv(args);
 	__exec_with_arg_vector("/usr/bin/pkg_clearcache", args_vector,
 			item->uid);
+
+	free(args_vector);
 }
 
 static void __process_kill(pm_dbus_msg *item)
