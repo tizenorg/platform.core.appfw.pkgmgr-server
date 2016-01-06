@@ -147,7 +147,6 @@ static int __handle_request_install(uid_t uid,
 	gsize args_count;
 	int ret = -1;
 	GVariant *value;
-	gchar *str;
 	int i = 0;
 	int len = 0;
 
@@ -311,7 +310,7 @@ static int __handle_request_move(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_enable(uid_t uid,
+static int __handle_request_enable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
@@ -324,7 +323,7 @@ static int __handle_request_enable(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, "pkg",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -337,7 +336,7 @@ static int __handle_request_enable(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_disable(uid_t uid,
+static int __handle_request_disable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
@@ -350,7 +349,7 @@ static int __handle_request_disable(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, "pkg",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -362,6 +361,59 @@ static int __handle_request_disable(uid_t uid,
 
 	return 0;
 }
+
+static int __handle_request_enable_app(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_APP, "pkg",
+				pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
+}
+
+static int __handle_request_disable_app(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_APP, "pkg",
+				pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
+}
+
 
 static int __handle_request_getsize(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
@@ -660,10 +712,14 @@ static void __handle_method_call(GDBusConnection *connection,
 		ret = __handle_request_cleardata(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "move") == 0)
 		ret = __handle_request_move(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "enable") == 0)
-		ret = __handle_request_enable(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "disable") == 0)
-		ret = __handle_request_disable(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_pkg") == 0)
+		ret = __handle_request_enable_pkg(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "disable_pkg") == 0)
+		ret = __handle_request_disable_pkg(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_app") == 0)
+		ret = __handle_request_enable_app(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "disable_app") == 0)
+		ret = __handle_request_disable_app(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "getsize") == 0)
 		ret = __handle_request_getsize(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "clearcache") == 0)

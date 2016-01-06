@@ -231,6 +231,21 @@ static void send_fail_signal(char *pname, char *ptype, char *args)
 	return;
 }
 
+static void send_signal_without_key(const char *pkg_type, const char *pkg_id, const char *key, const char *val)
+{
+	pkgmgr_installer *pi;
+
+	pi = pkgmgr_installer_new();
+	if (!pi) {
+		DBG("Failure in creating the pkgmgr_installer object");
+		return;
+	}
+
+	pkgmgr_installer_send_signal(pi, pkg_type, pkg_id, key, val);
+	pkgmgr_installer_free(pi);
+	return;
+}
+
 static gboolean pipe_io_handler(GIOChannel *io, GIOCondition cond, gpointer data)
 {
 	int x;
@@ -314,6 +329,27 @@ static void sighandler(int signo)
 	info.pid = waitpid(-1, &info.status, WNOHANG);
 	if (write(pipe_sig[1], &info, sizeof(struct signal_info_t)) < 0)
 		ERR("failed to write result: %s", strerror(errno));
+}
+
+static void __get_pkgid_by_appid(const char *appid, char **pkgid)
+{
+	int ret = 0;
+	char *tmp_pkgid = NULL;
+	pkgmgrinfo_appinfo_h handle = NULL;
+
+	ret = pkgmgrinfo_appinfo_get_appinfo(appid, &handle);
+	if (ret != PMINFO_R_OK)
+		return;
+
+	ret = pkgmgrinfo_appinfo_get_pkgid(handle, &tmp_pkgid);
+	if (ret != PMINFO_R_OK || tmp_pkgid == NULL) {
+		pkgmgrinfo_appinfo_destroy_appinfo(handle);
+		return;
+	}
+
+	*pkgid = strdup(tmp_pkgid);
+
+	pkgmgrinfo_appinfo_destroy_appinfo(handle);
 }
 
 static int __register_signal_handler(void)
@@ -792,14 +828,123 @@ static void __process_move(pm_dbus_msg *item)
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
 }
 
-static void __process_enable(pm_dbus_msg *item)
+static void __process_kill(pm_dbus_msg *item)
 {
-	/* TODO */
+	int ret;
+	pkgmgrinfo_pkginfo_h handle;
+
+	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(item->pkgid, item->uid,
+			&handle);
+	if (ret < 0) {
+		ERR("Failed to get handle");
+		return;
+	}
+
+	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
+			__pkgcmd_app_cb, "kill", item->uid);
+	if (ret < 0)
+		ERR("pkgmgrinfo_appinfo_get_list() failed");
+	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 }
 
-static void __process_disable(pm_dbus_msg *item)
+static void __process_enable_pkg(pm_dbus_msg *item)
 {
-	/* TODO */
+	int ret = -1;
+
+	/* send pkg install start signal */
+	send_signal_without_key(item->pkg_type, item->pkgid, "start", "install");
+
+	/* change db info */
+	ret = pkgmgr_parser_update_enabled_pkg_info_in_usr_db(item->pkgid, item->uid);
+	if (ret != PKGMGR_R_OK) {
+		ERR("Failed to enable pkg [%s]\n", item->pkgid);
+	   send_signal_without_key(item->pkg_type, item->pkgid, "end", "fail");
+	} else {
+		/* TODO(jungh.yeon) : Should we run plugin about enabled pkg? */
+		send_signal_without_key(item->pkg_type, item->pkgid, "end", "ok");
+	}
+
+	return;
+}
+
+static void __process_disable_pkg(pm_dbus_msg *item)
+{
+	int ret = -1;
+
+	/* send pkg uninstall start signal */
+	send_signal_without_key(item->pkg_type, item->pkgid, "start", "uninstall");
+
+	/* kill running app related with this package*/
+	__process_kill(item);
+
+	/* change db info */
+	ret = pkgmgr_parser_update_disabled_pkg_info_in_usr_db(item->pkgid, item->uid);
+	if (ret != PKGMGR_R_OK) {
+		ERR("Failed to disable pkg [%s]\n", item->pkgid);
+	   send_signal_without_key(item->pkg_type, item->pkgid, "end", "fail");
+	} else {
+		/* TODO(jungh.yeon) : Should we run plugin about disabled pkg? */
+		send_signal_without_key(item->pkg_type, item->pkgid, "end", "ok");
+	}
+
+	return;
+}
+
+static void __process_enable_app(pm_dbus_msg *item)
+{
+	int ret = -1;
+	char *pkgid = NULL;
+
+	/* get pkgid based on appid */
+	__get_pkgid_by_appid(item->pkgid, &pkgid);
+
+	/* send pkg uninstall start signal */
+	send_signal_without_key(item->pkg_type, pkgid, "start", "install");
+
+	/* change db info */
+	ret = pkgmgr_parser_update_enabled_app_info_in_usr_db(item->pkgid, item->uid);
+	if (ret != PKGMGR_R_OK) {
+		ERR("Failed to enable app [%s]\n", item->pkgid);
+	   send_signal_without_key(item->pkg_type, pkgid, "end", "fail");
+	} else {
+		/* TODO(jungh.yeon) : Should we run plugin about enabled app? */
+		send_signal_without_key(item->pkg_type, pkgid, "end", "ok");
+	}
+
+	if (pkgid)
+		free(pkgid);
+
+	return;
+}
+
+static void __process_disable_app(pm_dbus_msg *item)
+{
+	int ret = -1;
+	char *pkgid = NULL;
+
+	/* get pkgid based on appid */
+	__get_pkgid_by_appid(item->pkgid, &pkgid);
+
+	/* send pkg uninstall start signal */
+	send_signal_without_key(item->pkg_type, pkgid, "start", "uninstall");
+
+	/* kill running app*/
+	/* TODO(jungh.yeon) how to determine which app to be killed? */
+
+	/* change db info */
+	ret = pkgmgr_parser_update_disabled_app_info_in_usr_db(item->pkgid, item->uid);
+	if (ret != PKGMGR_R_OK) {
+		ERR("Failed to enable app [%s]\n", item->pkgid);
+	   send_signal_without_key(item->pkg_type, pkgid, "end", "fail");
+	} else {
+		/* TODO(jungh.yeon) : Should we run plugin about enabled app? */
+		send_signal_without_key(item->pkg_type, pkgid, "end", "ok");
+	}
+
+	if (pkgid)
+		free(pkgid);
+
+	return;
 }
 
 static void __process_getsize(pm_dbus_msg *item)
@@ -841,25 +986,6 @@ static void __process_clearcache(pm_dbus_msg *item)
 	args_vector = __generate_argv(args);
 	__exec_with_arg_vector("/usr/bin/pkg_clearcache", args_vector,
 			item->uid);
-}
-
-static void __process_kill(pm_dbus_msg *item)
-{
-	int ret;
-	pkgmgrinfo_pkginfo_h handle;
-
-	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(item->pkgid, item->uid,
-			&handle);
-	if (ret < 0) {
-		ERR("Failed to get handle");
-		return;
-	}
-
-	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
-			__pkgcmd_app_cb, "kill", item->uid);
-	if (ret < 0)
-		ERR("pkgmgrinfo_appinfo_get_list() failed");
-	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 }
 
 static void __process_check(pm_dbus_msg *item)
@@ -1001,11 +1127,17 @@ gboolean queue_job(void *data)
 		case PKGMGR_REQUEST_TYPE_MOVE:
 			__process_move(item);
 			break;
-		case PKGMGR_REQUEST_TYPE_ENABLE:
-			__process_enable(item);
+		case PKGMGR_REQUEST_TYPE_ENABLE_PKG:
+			__process_enable_pkg(item);
 			break;
-		case PKGMGR_REQUEST_TYPE_DISABLE:
-			__process_disable(item);
+		case PKGMGR_REQUEST_TYPE_DISABLE_PKG:
+			__process_disable_pkg(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_ENABLE_APP:
+			__process_enable_app(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_DISABLE_APP:
+			__process_disable_app(item);
 			break;
 		case PKGMGR_REQUEST_TYPE_GETSIZE:
 			__process_getsize(item);
