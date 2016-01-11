@@ -483,7 +483,7 @@ static void __make_pid_info_file(char *req_key, int pid)
 	if(req_key == NULL)
 		return;
 
-	snprintf(info_file, PATH_MAX, "/tmp/%s", req_key);
+	snprintf(info_file, PATH_MAX, "/tmp/pkgmgr/%s", req_key);
 
 	DBG("info_path(%s)", info_file);
 	file = fopen(info_file, "w");
