@@ -802,6 +802,16 @@ static void __process_disable(pm_dbus_msg *item)
 	/* TODO */
 }
 
+static void __process_enable_global_app(pm_dbus_msg *item)
+{
+	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 0);
+}
+
+static void __process_disable_global_app(pm_dbus_msg *item)
+{
+	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 1);
+}
+
 static void __process_getsize(pm_dbus_msg *item)
 {
 	char **args_vector;
@@ -1015,6 +1025,12 @@ gboolean queue_job(void *data)
 			break;
 		case PKGMGR_REQUEST_TYPE_CLEARCACHE:
 			__process_clearcache(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP:
+			__process_enable_global_app(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP:
+			__process_disable_global_app(item);
 			break;
 		case PKGMGR_REQUEST_TYPE_KILL:
 			__process_kill(item);
