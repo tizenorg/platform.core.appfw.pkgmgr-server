@@ -23,6 +23,7 @@
 #ifndef _PKGMGR_SERVER_H_
 #define _PKGMGR_SERVER_H_
 
+#include <sys/types.h>
 #include <glib.h>
 
 #ifdef LOG_TAG
@@ -60,6 +61,9 @@ enum request_type {
 	PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST,
 	PKGMGR_REQUEST_TYPE_REGISTER_LICENSE,
 	PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE,
+	PKGMGR_REQUEST_TYPE_ADD_BLACKLIST,
+	PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST,
+	PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
 };
 
 typedef struct {
@@ -85,5 +89,8 @@ gboolean queue_job(void *data);
 int __return_value_to_caller(const char *req_key, GVariant *result);
 int __init_request_handler(void);
 void __fini_request_handler(void);
+int __add_blacklist(uid_t uid, const char *pkgid);
+int __remove_blacklist(uid_t uid, const char *pkgid);
+int __check_blacklist(uid_t uid, const char *pkgid, int *result);
 
 #endif/*  _PKGMGR_SERVER_H_ */
