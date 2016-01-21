@@ -21,5 +21,8 @@
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="generate_license_request" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="register_license" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="decrypt_package" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="add_blacklist" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="remove_blacklist" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="check_blacklist" privilege="http://tizen.org/privilege/packagemanager.admin"/>
         </policy>
 </busconfig>
