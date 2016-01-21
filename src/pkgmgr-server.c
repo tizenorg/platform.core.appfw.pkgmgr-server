@@ -1000,6 +1000,37 @@ static int __process_decrypt_package(pm_dbus_msg *item)
 	return 0;
 }
 
+static void __process_add_blacklist(pm_dbus_msg *item)
+{
+	int ret;
+
+	ret = __add_blacklist(item->uid, item->pkgid);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", ret));
+}
+
+static void __process_remove_blacklist(pm_dbus_msg *item)
+{
+	int ret;
+
+	ret = __remove_blacklist(item->uid, item->pkgid);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", ret));
+}
+
+static void __process_check_blacklist(pm_dbus_msg *item)
+{
+	int ret;
+	int result = 0;
+
+	ret = __check_blacklist(item->uid, item->pkgid, &result);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(ii)", result, ret));
+}
+
 gboolean queue_job(void *data)
 {
 	pm_dbus_msg *item = NULL;
@@ -1081,9 +1112,17 @@ gboolean queue_job(void *data)
 	case PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE:
 		ret = __process_decrypt_package(item);
 		break;
+	case PKGMGR_REQUEST_TYPE_ADD_BLACKLIST:
+		__process_add_blacklist(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST:
+		__process_remove_blacklist(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST:
+		__process_check_blacklist(item);
+		break;
 	default:
 		ret = -1;
-		break;
 	}
 
 	ptr->pid = ret;
