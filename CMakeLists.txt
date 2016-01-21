@@ -17,7 +17,7 @@ INCLUDE_DIRECTORIES(include)
 INCLUDE(FindPkgConfig)
 
 SET(PKGMGR_SERVER "pkgmgr-server")
-SET(SRCS src/pkgmgr-server.c src/request.c src/pm-queue.c)
+SET(SRCS src/pkgmgr-server.c src/request.c src/pm-queue.c src/db.c)
 
 pkg_check_modules(SERVER_DEPS REQUIRED
 		gio-2.0
@@ -26,6 +26,7 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		pkgmgr-info
 		libtzplatform-config
 		drm-service-core-tizen
+		sqlite3
 		pkgmgr)
 FOREACH(SERVER_FLAGS ${SERVER_DEPS_CFLAGS})
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SERVER_FLAGS}")
