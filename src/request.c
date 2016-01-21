@@ -105,6 +105,21 @@ static const char instropection_xml[] =
 	"      <arg type='s' name='decrypted_file_path' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
+	"    <method name='add_blacklist'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='remove_blacklist'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='check_blacklist'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"</node>";
 static GDBusNodeInfo *instropection_data;
@@ -614,6 +629,84 @@ static int __handle_request_decrypt_package(uid_t uid,
 	return 0;
 }
 
+static int __handle_request_add_blacklist(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ADD_BLACKLIST,
+				"pkg", pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
+}
+
+static int __handle_request_remove_blacklist(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST,
+				"pkg", pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
+}
+
+static int __handle_request_check_blacklist(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
+				"pkg", pkgid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
+}
+
 static uid_t __get_caller_uid(GDBusConnection *connection, const char *name)
 {
 	GError *err = NULL;
@@ -680,6 +773,15 @@ static void __handle_method_call(GDBusConnection *connection,
 				parameters);
 	else if (g_strcmp0(method_name, "decrypt_package") == 0)
 		ret = __handle_request_decrypt_package(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "add_blacklist") == 0)
+		ret = __handle_request_add_blacklist(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "remove_blacklist") == 0)
+		ret = __handle_request_remove_blacklist(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "check_blacklist") == 0)
+		ret = __handle_request_check_blacklist(uid, invocation,
 				parameters);
 	else
 		ret = -1;
