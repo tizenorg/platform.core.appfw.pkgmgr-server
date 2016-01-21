@@ -23,6 +23,7 @@ BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  pkgconfig(drm-service-core-tizen)
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgmgr-info-parser-devel
 BuildRequires:  pkgmgr-info-parser
 BuildRequires:  fdupes
@@ -34,8 +35,12 @@ Packager Manager server package for packaging
 %setup -q
 cp %{SOURCE1001} .
 
+%define db_dir %{_localstatedir}/lib/package-manager
+
 %build
-%cmake .
+sqlite3 blacklist.db < ./blacklist.sql
+
+%cmake . -DDB_DIR=%{db_dir}
 
 %__make %{?_smp_mflags}
 
@@ -45,6 +50,9 @@ cp %{SOURCE1001} .
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
+
+mkdir -p %{buildroot}%{db_dir}
+install -m 0600 blacklist.db %{buildroot}%{db_dir}
 
 %fdupes %{buildroot}
 
@@ -58,5 +66,6 @@ mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server
+%config(noreplace) %{db_dir}/blacklist.db
 %exclude %{_sysconfdir}/package-manager/server/queue_status
 /usr/share/license/%{name}
