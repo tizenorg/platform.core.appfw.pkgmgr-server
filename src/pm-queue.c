@@ -174,6 +174,12 @@ int _pm_queue_init(void)
 		c++;
 		memset(abs_filename, 0x00, MAX_PKG_NAME_LEN);
 	}
+
+	/* add count of C for "null".
+	* "null" is for some requests will be passed to pkgmgr-server
+	* but not handled by exec but handled by pkgmgr-server itself. */
+	c++;
+
 	/*Add entries to info map.*/
 	ptr = (queue_info_map*)calloc(c , sizeof(queue_info_map));
 	memset(ptr, '\0', c * sizeof(queue_info_map));
@@ -237,7 +243,16 @@ int _pm_queue_init(void)
 		memset(buf, 0x00, MAX_PKG_NAME_LEN);
 		continue;
 	}
+
+	snprintf(ptr->backend, sizeof(ptr->backend), "none");
+	snprintf(ptr->pkgtype, sizeof(ptr->pkgtype), "none");
+	ptr->queue_slot = slot;
+	entries++;
+	slot++;
+	ptr++;
+
 	free(namelist);
+
 	num_of_backends = slot;
 
 #ifdef DEBUG_INFO

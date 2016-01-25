@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <dbus/dbus.h>
 
 #include <glib.h>
 #include <gio/gio.h>
@@ -53,6 +54,8 @@
 
 #define OWNER_ROOT 0
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+
+#define DBUS_SIGNAL_STRING_ARG_NUM 6
 
 typedef struct  {
 	char **env;
@@ -201,6 +204,132 @@ static void __unset_recovery_mode(uid_t uid, char *pkgid, char *pkg_type)
 	ret = remove(recovery_file);
 	if (ret < 0)
 		DBG("remove recovery_file[%s] fail\n", recovery_file);
+}
+
+static void __send_app_signal(const char *req_id, const char *pkg_type, const char *pkgid,
+		const char *appid, const char *key, const char *val)
+{
+	dbus_uint32_t serial = 0;
+	DBusMessage *msg;
+	DBusMessageIter args;
+	DBusError err;
+	DBusConnection *conn;
+	uid_t uid = getuid();
+	const char *values[DBUS_SIGNAL_STRING_ARG_NUM] = {
+		req_id,
+		pkg_type,
+		pkgid,
+		appid,
+		key,
+		val
+	};
+	int i;
+
+	dbus_error_init(&err);
+
+	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	if (dbus_error_is_set(&err)) {
+		DBG("Connection error: %s", err.message);
+		dbus_error_free(&err);
+	}
+	dbus_error_free(&err);
+	if (NULL == conn) {
+		DBG("conn is NULL");
+		return;
+	}
+
+	char signal_name[128] = {0, };
+
+	msg = dbus_message_new_signal(COMM_STATUS_BROADCAST_OBJECT_PATH,
+			COMM_STATUS_BROADCAST_INTERFACE, COMM_STATUS_BROADCAST_EVENT_ENABLE_DISABLE_APP);
+	if (NULL == msg) {
+		DBG("msg NULL");
+		return;
+	}
+
+	dbus_message_iter_init_append(msg, &args);
+
+	if (!dbus_message_iter_append_basic(&args, (int)'u', &uid)) {
+			DBG("dbus_message_iter_append_basic failed: Out of memory");
+			return;
+	}
+
+	for (i = 0; i < DBUS_SIGNAL_STRING_ARG_NUM; i++) {
+		if (!dbus_message_iter_append_basic
+		    (&args, (int)'s', &(values[i]))) {
+			DBG("dbus_message_iter_append_basic failed: Out of memory");
+			return;
+		}
+	}
+	if (!dbus_connection_send(conn, msg, &serial)) {
+		DBG("dbus_connection_send failed: Out of memory");
+		return;
+	}
+	dbus_connection_flush(conn);
+	dbus_message_unref(msg);
+}
+
+static void __send_signal(const char *req_id, const char *pkg_type, const char *pkgid,
+		const char *key, const char *val)
+{
+	dbus_uint32_t serial = 0;
+	DBusMessage *msg;
+	DBusMessageIter args;
+	DBusError err;
+	DBusConnection *conn;
+	uid_t uid = getuid();
+	const char *values[DBUS_SIGNAL_STRING_ARG_NUM] = {
+		req_id,
+		pkg_type,
+		pkgid,
+		"",
+		key,
+		val
+	};
+	int i;
+
+	dbus_error_init(&err);
+
+	conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	if (dbus_error_is_set(&err)) {
+		DBG("Connection error: %s", err.message);
+		dbus_error_free(&err);
+	}
+	dbus_error_free(&err);
+	if (NULL == conn) {
+		DBG("conn is NULL");
+		return;
+	}
+
+	char signal_name[128] = {0, };
+
+	msg = dbus_message_new_signal(COMM_STATUS_BROADCAST_OBJECT_PATH,
+			COMM_STATUS_BROADCAST_INTERFACE, COMM_STATUS_BROADCAST_SIGNAL_STATUS);
+	if (NULL == msg) {
+		DBG("msg NULL");
+		return;
+	}
+
+	dbus_message_iter_init_append(msg, &args);
+
+	if (!dbus_message_iter_append_basic(&args, (int)'u', &uid)) {
+			DBG("dbus_message_iter_append_basic failed: Out of memory");
+			return;
+	}
+
+	for (i = 0; i < DBUS_SIGNAL_STRING_ARG_NUM; i++) {
+		if (!dbus_message_iter_append_basic
+		    (&args, (int)'s', &(values[i]))) {
+			DBG("dbus_message_iter_append_basic failed: Out of memory");
+			return;
+		}
+	}
+	if (!dbus_connection_send(conn, msg, &serial)) {
+		DBG("dbus_connection_send failed: Out of memory");
+		return;
+	}
+	dbus_connection_flush(conn);
+	dbus_message_unref(msg);
 }
 
 static void send_fail_signal(char *pname, char *ptype, char *args)
@@ -718,6 +847,29 @@ static void __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
 	}
 }
 
+void __change_item_info(pm_dbus_msg *item, uid_t uid)
+{
+	int ret = 0;
+	char *pkgid = NULL;
+	pkgmgrinfo_appinfo_h handle = NULL;
+
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
+	if (ret != PMINFO_R_OK)
+		return;
+
+	ret = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	if (ret != PMINFO_R_OK) {
+		pkgmgrinfo_appinfo_destroy_appinfo(handle);
+		return;
+	}
+
+	strncpy(item->appid, item->pkgid, sizeof(item->pkgid) - 1);
+	memset((item->pkgid),0,MAX_PKG_NAME_LEN);
+	strncpy(item->pkgid, pkgid, sizeof(item->pkgid) - 1);
+
+	pkgmgrinfo_appinfo_destroy_appinfo(handle);
+}
+
 static void __process_install(pm_dbus_msg *item)
 {
 	char *backend_cmd;
@@ -792,24 +944,97 @@ static void __process_move(pm_dbus_msg *item)
 	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
 }
 
-static void __process_enable(pm_dbus_msg *item)
+static void __process_enable_pkg(pm_dbus_msg *item)
 {
 	/* TODO */
 }
 
-static void __process_disable(pm_dbus_msg *item)
+static void __process_disable_pkg(pm_dbus_msg *item)
 {
 	/* TODO */
+}
+
+static void __process_enable_app(pm_dbus_msg *item)
+{
+	int ret = -1;
+
+	__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, item->uid);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return;
+	}
+
+	ret = pkgmgr_parser_update_app_disable_info_in_db(item->appid, item->uid, 0);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
+}
+
+static void __process_disable_app(pm_dbus_msg *item)
+{
+	int ret = -1;
+
+	__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, item->uid);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return;
+	}
+
+	ret = pkgmgr_parser_update_app_disable_info_in_db(item->appid, item->uid, 1);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
 }
 
 static void __process_enable_global_app(pm_dbus_msg *item)
 {
-	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 0);
+	int ret = -1;
+
+	__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_global_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, GLOBAL_USER);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return;
+	}
+
+	pkgmgr_parser_update_global_app_disable_info_in_db(item->appid, item->uid, 0);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
 }
 
 static void __process_disable_global_app(pm_dbus_msg *item)
 {
-	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 1);
+	int ret = -1;
+
+	__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_global_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, GLOBAL_USER);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return;
+	}
+
+	ret = pkgmgr_parser_update_global_app_disable_info_in_db(item->appid, item->uid, 1);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
 }
 
 static void __process_getsize(pm_dbus_msg *item)
@@ -991,6 +1216,7 @@ gboolean queue_job(void *data)
 	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
 	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
 	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
+	memset((item->appid),0,MAX_PKG_NAME_LEN);
 
 	ptr->uid = item->uid;
 	ptr->pid = fork();
@@ -1011,11 +1237,17 @@ gboolean queue_job(void *data)
 		case PKGMGR_REQUEST_TYPE_MOVE:
 			__process_move(item);
 			break;
-		case PKGMGR_REQUEST_TYPE_ENABLE:
-			__process_enable(item);
+		case PKGMGR_REQUEST_TYPE_ENABLE_PKG:
+			__process_enable_pkg(item);
 			break;
-		case PKGMGR_REQUEST_TYPE_DISABLE:
-			__process_disable(item);
+		case PKGMGR_REQUEST_TYPE_DISABLE_PKG:
+			__process_disable_pkg(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_ENABLE_APP:
+			__process_enable_app(item);
+			break;
+		case PKGMGR_REQUEST_TYPE_DISABLE_APP:
+			__process_disable_app(item);
 			break;
 		case PKGMGR_REQUEST_TYPE_GETSIZE:
 			__process_getsize(item);
