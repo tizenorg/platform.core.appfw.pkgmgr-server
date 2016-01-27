@@ -654,6 +654,8 @@ static char **__generate_argv(const char *args)
 	gint argcp;
 	gchar **argvp;
 	GError *gerr = NULL;
+	int i;
+
 	ret_parse = g_shell_parse_argv(args,
 			&argcp, &argvp, &gerr);
 	if (FALSE == ret_parse) {
@@ -662,198 +664,220 @@ static char **__generate_argv(const char *args)
 		exit(1);
 	}
 
-	/* Setup argument !!! */
-	/*char **args_vector =
-	  calloc(argcp + 4, sizeof(char *)); */
-	char **args_vector = calloc(argcp + 1, sizeof(char *));
-	if (args_vector == NULL) {
-		ERR("Out of memory");
-		exit(1);
-	}
-	/*args_vector[0] = strdup(backend_cmd);
-	  args_vector[1] = strdup(item->req_id);
-	  args_vector[2] = strdup(item->pkgid); */
-	int arg_idx;
-	for (arg_idx = 0; arg_idx < argcp; arg_idx++) {
-		/* args_vector[arg_idx+3] = argvp[arg_idx]; */
-		args_vector[arg_idx] = argvp[arg_idx];
-	}
-
 	/* dbg */
-	/*for(arg_idx = 0; arg_idx < argcp+3; arg_idx++) { */
-	for (arg_idx = 0; arg_idx < argcp + 1; arg_idx++) {
-		DBG(">>>>>> args_vector[%d]=%s",
-				arg_idx, args_vector[arg_idx]);
-	}
+	for (i = 0; i < argcp; i++)
+		DBG(">>>>>> argsv[%d]=%s", i, argvp[i]);
 
-	return args_vector;
+	return argvp;
 }
 
-static void __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
+void __set_environment(gpointer user_data)
 {
-	user_ctx* user_context = get_user_context(uid);
+	user_ctx *ctx = (user_ctx *)user_data;
 
-	if(!user_context) {
+	if (set_environement(ctx))
+		DBG("Failed to set env for the user : %d", ctx->uid);
+}
+
+static int __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
+{
+	user_ctx* user_context;
+	GError *error = NULL;
+	gboolean ret;
+	int pid;
+
+	user_context = get_user_context(uid);
+	if (!user_context) {
 		DBG("Failed to getenv for the user : %d", uid);
-		exit(1);
+		return -1;
 	}
-	if(set_environement(user_context)){
-		DBG("Failed to set env for the user : %d", uid);
-		exit(1);
+
+	ret = g_spawn_async(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
+			__set_environment, (gpointer)user_context, &pid,
+			&error);
+	if (ret != TRUE) {
+		ERR("Failed to excute backend: %s", error->message);
+		g_error_free(error);
 	}
+
 	free_user_context(user_context);
 
-	/* Execute backend !!! */
-
-	int ret = execv(cmd, argv);
-
-	/* Code below: exec failure. Should not be happened! */
-	DBG(">>>>>> OOPS 2!!!");
-
-	/* g_strfreev(args_vector); *//* FIXME: causes error */
-
-	if (ret == -1) {
-		perror("fail to exec");
-		exit(1);
-	}
+	return pid;
 }
 
-static void __process_install(pm_dbus_msg *item)
+static int __process_install(pm_dbus_msg *item)
 {
 	char *backend_cmd;
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN] = {'\0', };
+	int pid;
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
-		return;
+		return -1;
 
 	snprintf(args, sizeof(args), "%s -k %s -i %s %s", backend_cmd,
 			item->req_id, item->pkgid, item->args);
 
-	args_vector = __generate_argv(args);
-	args_vector[0] = backend_cmd;
+	argv = __generate_argv(args);
 
-	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
-static void __process_reinstall(pm_dbus_msg *item)
+static int __process_reinstall(pm_dbus_msg *item)
 {
 	char *backend_cmd;
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
-		return;
+		return -1;
 
 	snprintf(args, sizeof(args), "%s -k %s -r %s", backend_cmd,
 			item->req_id, item->pkgid);
-	args_vector = __generate_argv(args);
-	args_vector[0] = backend_cmd;
+	argv = __generate_argv(args);
 
-	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
-static void __process_uninstall(pm_dbus_msg *item)
+static int __process_uninstall(pm_dbus_msg *item)
 {
 	char *backend_cmd;
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
-		return;
+		return -1;
 
 	snprintf(args, sizeof(args), "%s -k %s -d %s", backend_cmd,
 			item->req_id, item->pkgid);
-	args_vector = __generate_argv(args);
-	args_vector[0] = backend_cmd;
+	argv = __generate_argv(args);
 
-	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
-static void __process_move(pm_dbus_msg *item)
+static int __process_move(pm_dbus_msg *item)
 {
 	char *backend_cmd;
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
-		return;
+		return -1;
 
 	/* TODO: set movetype */
 	snprintf(args, sizeof(args), "%s -k %s -m %s -t %s", backend_cmd,
 			item->req_id, item->pkgid, item->args);
-	args_vector = __generate_argv(args);
-	args_vector[0] = backend_cmd;
+	argv = __generate_argv(args);
 
-	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
-static void __process_enable(pm_dbus_msg *item)
+static int __process_enable(pm_dbus_msg *item)
 {
 	/* TODO */
+	return 0;
 }
 
-static void __process_disable(pm_dbus_msg *item)
+static int __process_disable(pm_dbus_msg *item)
 {
 	/* TODO */
+	return 0;
 }
 
-static void __process_enable_global_app(pm_dbus_msg *item)
+static int __process_enable_global_app(pm_dbus_msg *item)
 {
 	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 0);
+	return 0;
 }
 
-static void __process_disable_global_app(pm_dbus_msg *item)
+static int __process_disable_global_app(pm_dbus_msg *item)
 {
 	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 1);
+	return 0;
 }
 
-static void __process_getsize(pm_dbus_msg *item)
+static int __process_getsize(pm_dbus_msg *item)
 {
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	snprintf(args, sizeof(args), "%s %s -k %s", item->pkgid, item->args,
 			item->req_id);
-	args_vector = __generate_argv(args);
-	__exec_with_arg_vector("/usr/bin/pkg_getsize", args_vector, item->uid);
+	argv = __generate_argv(args);
+	pid = __exec_with_arg_vector("/usr/bin/pkg_getsize", argv, item->uid);
+
+	g_strfreev(argv);
+
+	return pid;
 }
 
-static void __process_cleardata(pm_dbus_msg *item)
+static int __process_cleardata(pm_dbus_msg *item)
 {
 	char *backend_cmd;
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	backend_cmd = _get_backend_cmd(item->pkg_type);
 	if (backend_cmd == NULL)
-		return;
+		return -1;
 
 	/* TODO: set movetype */
 	snprintf(args, sizeof(args), "%s -k %s -c %s", backend_cmd,
 			item->req_id, item->pkgid);
-	args_vector = __generate_argv(args);
-	args_vector[0] = backend_cmd;
+	argv = __generate_argv(args);
 
-	__exec_with_arg_vector(backend_cmd, args_vector, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
-static void __process_clearcache(pm_dbus_msg *item)
+static int __process_clearcache(pm_dbus_msg *item)
 {
-	char **args_vector;
+	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
+	int pid;
 
 	snprintf(args, sizeof(args), "%s", item->pkgid);
-	args_vector = __generate_argv(args);
-	__exec_with_arg_vector("/usr/bin/pkg_clearcache", args_vector,
-			item->uid);
+	argv = __generate_argv(args);
+	pid = __exec_with_arg_vector("/usr/bin/pkg_clearcache", argv, item->uid);
+
+	g_strfreev(argv);
+
+	return pid;
 }
 
-static void __process_kill(pm_dbus_msg *item)
+static int __process_kill(pm_dbus_msg *item)
 {
 	int ret;
 	pkgmgrinfo_pkginfo_h handle;
@@ -862,17 +886,21 @@ static void __process_kill(pm_dbus_msg *item)
 			&handle);
 	if (ret < 0) {
 		ERR("Failed to get handle");
-		return;
+		return -1;
 	}
 
 	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
 			__pkgcmd_app_cb, "kill", item->uid);
-	if (ret < 0)
-		ERR("pkgmgrinfo_appinfo_get_list() failed");
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	if (ret < 0) {
+		ERR("pkgmgrinfo_appinfo_get_list() failed");
+		return -1;
+	}
+
+	return 0;
 }
 
-static void __process_check(pm_dbus_msg *item)
+static int __process_check(pm_dbus_msg *item)
 {
 	int ret;
 	pkgmgrinfo_pkginfo_h handle;
@@ -881,17 +909,21 @@ static void __process_check(pm_dbus_msg *item)
 			&handle);
 	if (ret < 0) {
 		ERR("Failed to get handle");
-		return;
+		return -1;
 	}
 
 	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
 			__pkgcmd_app_cb, "check", item->uid);
-	if (ret < 0)
-		ERR("pkgmgrinfo_appinfo_get_list() failed");
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
+	if (ret < 0) {
+		ERR("pkgmgrinfo_appinfo_get_list() failed");
+		return -1;
+	}
+
+	return 0;
 }
 
-static void __process_generate_license_request(pm_dbus_msg *item)
+static int __process_generate_license_request(pm_dbus_msg *item)
 {
 	int ret;
 	char *resp_data;
@@ -910,15 +942,17 @@ static void __process_generate_license_request(pm_dbus_msg *item)
 		ERR("drm_tizen_generate_license_request failed: %d", ret);
 		__return_value_to_caller(item->req_id, g_variant_new("(iss)",
 					PKGMGR_R_ESYSTEM, "", ""));
-		return;
+		return -1;
 	}
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(iss)", PKGMGR_R_OK, req_data,
 				license_url));
+
+	return 0;
 }
 
-static void __process_register_license(pm_dbus_msg *item)
+static int __process_register_license(pm_dbus_msg *item)
 {
 	int ret;
 	char *resp_data;
@@ -930,14 +964,16 @@ static void __process_register_license(pm_dbus_msg *item)
 		ERR("drm_tizen_register_license failed: %d", ret);
 		__return_value_to_caller(item->req_id,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		return;
+		return -1;
 	}
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
 }
 
-static void __process_decrypt_package(pm_dbus_msg *item)
+static int __process_decrypt_package(pm_dbus_msg *item)
 {
 	int ret;
 	char *drm_file_path;
@@ -953,11 +989,13 @@ static void __process_decrypt_package(pm_dbus_msg *item)
 		ERR("drm_tizen_register_license failed: %d", ret);
 		__return_value_to_caller(item->req_id,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		return;
+		return -1;
 	}
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", PKGMGR_R_OK));
+
+	return 0;
 }
 
 gboolean queue_job(void *data)
@@ -965,6 +1003,7 @@ gboolean queue_job(void *data)
 	pm_dbus_msg *item = NULL;
 	backend_info *ptr;
 	int x;
+	int ret;
 
 	/* Pop a job from queue */
 	for (x = 0, ptr = begin; x < num_of_backends; x++, ptr++) {
@@ -984,85 +1023,68 @@ gboolean queue_job(void *data)
 	__set_backend_busy(x);
 	__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 
-	/* fork */
-	_save_queue_status(item, "processing");
-	DBG("saved queue status. Now try fork()");
 	/*save pkg type and pkg name for future*/
 	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
 	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
 	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
-
 	ptr->uid = item->uid;
-	ptr->pid = fork();
-	DBG("child forked [%d] for request type [%d]", ptr->pid, item->req_type);
+	DBG("handle request type [%d]", ptr->pid, item->req_type);
 
-	switch (ptr->pid) {
-	case 0:	/* child */
-		switch (item->req_type) {
-		case PKGMGR_REQUEST_TYPE_INSTALL:
-			__process_install(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_REINSTALL:
-			__process_reinstall(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_UNINSTALL:
-			__process_uninstall(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_MOVE:
-			__process_move(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_ENABLE:
-			__process_enable(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_DISABLE:
-			__process_disable(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_GETSIZE:
-			__process_getsize(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_CLEARDATA:
-			__process_cleardata(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_CLEARCACHE:
-			__process_clearcache(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP:
-			__process_enable_global_app(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP:
-			__process_disable_global_app(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_KILL:
-			__process_kill(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_CHECK:
-			__process_check(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST:
-			__process_generate_license_request(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_REGISTER_LICENSE:
-			__process_register_license(item);
-			break;
-		case PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE:
-			__process_decrypt_package(item);
-			break;
-		}
-		/* exit child */
-		_save_queue_status(item, "done");
-		exit(0);
+	switch (item->req_type) {
+	case PKGMGR_REQUEST_TYPE_INSTALL:
+		ret = __process_install(item);
 		break;
-
-	case -1:
-		fprintf(stderr, "Fail to execute_fork()\n");
-		exit(1);
-
-	default:	/* parent */
-		DBG("parent exit\n");
-		_save_queue_status(item, "done");
+	case PKGMGR_REQUEST_TYPE_REINSTALL:
+		ret = __process_reinstall(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_UNINSTALL:
+		ret = __process_uninstall(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_MOVE:
+		ret = __process_move(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_ENABLE:
+		ret = __process_enable(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE:
+		ret = __process_disable(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_GETSIZE:
+		ret = __process_getsize(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_CLEARDATA:
+		ret = __process_cleardata(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_CLEARCACHE:
+		ret = __process_clearcache(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP:
+		ret = __process_enable_global_app(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP:
+		ret = __process_disable_global_app(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_KILL:
+		ret = __process_kill(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_CHECK:
+		ret = __process_check(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST:
+		ret = __process_generate_license_request(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_REGISTER_LICENSE:
+		ret = __process_register_license(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE:
+		ret = __process_decrypt_package(item);
+		break;
+	default:
+		ret = -1;
 		break;
 	}
 
+	ptr->pid = ret;
 	free(item);
 
 	return FALSE;
