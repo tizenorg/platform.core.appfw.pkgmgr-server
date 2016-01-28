@@ -824,14 +824,15 @@ static int __process_disable_global_app(pm_dbus_msg *item)
 
 static int __process_getsize(pm_dbus_msg *item)
 {
+	static const char *backend_cmd = "/usr/bin/pkg_getsize";
 	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
 	int pid;
 
-	snprintf(args, sizeof(args), "%s %s -k %s", item->pkgid, item->args,
-			item->req_id);
+	snprintf(args, sizeof(args), "%s %s %s -k %s", backend_cmd, item->pkgid,
+			item->args, item->req_id);
 	argv = __generate_argv(args);
-	pid = __exec_with_arg_vector("/usr/bin/pkg_getsize", argv, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
 
 	g_strfreev(argv);
 
@@ -864,13 +865,14 @@ static int __process_cleardata(pm_dbus_msg *item)
 
 static int __process_clearcache(pm_dbus_msg *item)
 {
+	static const char *backend_cmd = "/usr/bin/pkg_clearcache";
 	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
 	int pid;
 
 	snprintf(args, sizeof(args), "%s", item->pkgid);
 	argv = __generate_argv(args);
-	pid = __exec_with_arg_vector("/usr/bin/pkg_clearcache", argv, item->uid);
+	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
 
 	g_strfreev(argv);
 
