@@ -203,6 +203,30 @@ static void __unset_recovery_mode(uid_t uid, char *pkgid, char *pkg_type)
 		DBG("remove recovery_file[%s] fail\n", recovery_file);
 }
 
+static void __send_app_signal(uid_t uid, const char *req_id,
+		const char *pkg_type, const char *pkgid, const char *appid,
+		const char *key, const char *val)
+{
+	pkgmgr_installer *pi;
+
+	pi = pkgmgr_installer_new();
+	if (!pi) {
+		DBG("Failure in creating the pkgmgr_installer object");
+		return;
+	}
+
+	if (pkgmgr_installer_set_request_type(pi,PKGMGR_REQ_ENABLE_DISABLE_APP))
+		goto catch;
+	if (pkgmgr_installer_set_session_id(pi, req_id))
+		goto catch;
+	pkgmgr_installer_send_app_signal(pi, pkg_type, pkgid, appid, key, val);
+
+catch:
+	pkgmgr_installer_free(pi);
+
+	return;
+}
+
 static void send_fail_signal(char *pname, char *ptype, char *args)
 {
 	DBG("send_fail_signal start\n");
@@ -705,6 +729,29 @@ static int __fork_and_exec_with_args(char **argv, uid_t uid)
 	return pid;
 }
 
+void __change_item_info(pm_dbus_msg *item, uid_t uid)
+{
+	int ret = 0;
+	char *pkgid = NULL;
+	pkgmgrinfo_appinfo_h handle = NULL;
+
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
+	if (ret != PMINFO_R_OK)
+		return;
+
+	ret = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
+	if (ret != PMINFO_R_OK) {
+		pkgmgrinfo_appinfo_destroy_appinfo(handle);
+		return;
+	}
+
+	strncpy(item->appid, item->pkgid, sizeof(item->pkgid) - 1);
+	memset((item->pkgid),0,MAX_PKG_NAME_LEN);
+	strncpy(item->pkgid, pkgid, sizeof(item->pkgid) - 1);
+
+	pkgmgrinfo_appinfo_destroy_appinfo(handle);
+}
+
 static int __process_install(pm_dbus_msg *item)
 {
 	char *backend_cmd;
@@ -798,28 +845,104 @@ static int __process_move(pm_dbus_msg *item)
 	return pid;
 }
 
-static int __process_enable(pm_dbus_msg *item)
+static int __process_enable_pkg(pm_dbus_msg *item)
 {
 	/* TODO */
 	return 0;
 }
 
-static int __process_disable(pm_dbus_msg *item)
+static int __process_disable_pkg(pm_dbus_msg *item)
 {
 	/* TODO */
 	return 0;
 }
 
-static int __process_enable_global_app(pm_dbus_msg *item)
+static int __process_enable_app(pm_dbus_msg *item)
 {
-	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 0);
-	return 0;
+	int ret = -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, item->uid);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return ret;
+	}
+
+	ret = pkgmgr_parser_update_app_disable_info_in_db(item->appid, item->uid, 0);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
+	return ret;
 }
 
-static int __process_disable_global_app(pm_dbus_msg *item)
+static int __process_disable_app(pm_dbus_msg *item)
 {
-	pkgmgr_parser_update_global_app_disable_info_in_db(item->pkgid, item->uid, 1);
-	return 0;
+	int ret = -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_app");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, item->uid);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return ret;
+	}
+
+	ret = pkgmgr_parser_update_app_disable_info_in_db(item->appid, item->uid, 1);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
+	return ret;
+}
+
+static int __process_enable_global_app_for_uid(pm_dbus_msg *item)
+{
+	int ret = -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_global_app_for_uid");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, GLOBAL_USER);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return ret;
+	}
+
+	ret = pkgmgr_parser_update_global_app_disable_for_uid_info_in_db(item->appid, item->uid, 0);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
+	return ret;
+}
+
+static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
+{
+	int ret = -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_global_app_for_uid");
+
+	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
+	__change_item_info(item, GLOBAL_USER);
+	if (strlen(item->appid) == 0) {
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		return ret;
+	}
+
+	ret = pkgmgr_parser_update_global_app_disable_for_uid_info_in_db(item->appid, item->uid, 1);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+
+	return ret;
 }
 
 static int __process_getsize(pm_dbus_msg *item)
@@ -1026,6 +1149,7 @@ gboolean queue_job(void *data)
 	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
 	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
 	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
+	memset((item->appid),0,MAX_PKG_NAME_LEN);
 	ptr->uid = item->uid;
 	DBG("handle request type [%d]", ptr->pid, item->req_type);
 
@@ -1050,11 +1174,17 @@ gboolean queue_job(void *data)
 		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_move(item);
 		break;
-	case PKGMGR_REQUEST_TYPE_ENABLE:
-		ret = __process_enable(item);
+	case PKGMGR_REQUEST_TYPE_ENABLE_PKG:
+		ret = __process_enable_pkg(item);
 		break;
-	case PKGMGR_REQUEST_TYPE_DISABLE:
-		ret = __process_disable(item);
+	case PKGMGR_REQUEST_TYPE_DISABLE_PKG:
+		ret = __process_disable_pkg(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP:
+		ret = __process_enable_app(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP:
+		ret = __process_disable_app(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_GETSIZE:
 		__set_backend_busy(x);
@@ -1068,11 +1198,11 @@ gboolean queue_job(void *data)
 		__set_backend_busy(x);
 		ret = __process_clearcache(item);
 		break;
-	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP:
-		ret = __process_enable_global_app(item);
+	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID:
+		ret = __process_enable_global_app_for_uid(item);
 		break;
-	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP:
-		ret = __process_disable_global_app(item);
+	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID:
+		ret = __process_disable_global_app_for_uid(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_KILL:
 		ret = __process_kill(item);
