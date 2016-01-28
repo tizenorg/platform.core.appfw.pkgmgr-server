@@ -29,9 +29,6 @@
 
 #include "pkgmgr-server.h"
 
-#define STATUS_FILE	"/etc/package-manager/server/queue_status"
-/* #define STATUS_FILE   "./queue_status" */
-
 typedef struct _pm_queue_data {
 	pm_dbus_msg *msg;
 	struct _pm_queue_data *next;
@@ -54,7 +51,6 @@ pm_dbus_msg *_pm_queue_pop(int position);
 void _pm_queue_final();
 void _pm_queue_delete(pm_dbus_msg *item);
 pm_queue_data *_add_node();
-void _save_queue_status(pm_dbus_msg *item, char *status);
 void _print_queue(int position);
 
 #endif				/* _PM_QUEUE_H_ */

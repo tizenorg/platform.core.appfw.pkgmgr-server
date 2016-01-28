@@ -173,7 +173,6 @@ static int __handle_request_install(uid_t uid,
 	gsize args_count;
 	int ret = -1;
 	GVariant *value;
-	gchar *str;
 	int i = 0;
 	int len = 0;
 

@@ -42,6 +42,5 @@ CONFIGURE_FILE(org.tizen.pkgmgr.service.in org.tizen.pkgmgr.service @ONLY)
 CONFIGURE_FILE(org.tizen.pkgmgr.conf.in org.tizen.pkgmgr.conf @ONLY)
 
 INSTALL(TARGETS ${PKGMGR_SERVER} DESTINATION bin)
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/queue_status DESTINATION ${SYSCONF_INSTALL_DIR}/package-manager/server/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.pkgmgr.service DESTINATION ${PREFIX}/share/dbus-1/system-services/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.pkgmgr.conf DESTINATION ${SYSCONF_INSTALL_DIR}/dbus-1/system.d/)

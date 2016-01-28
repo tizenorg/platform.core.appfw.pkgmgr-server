@@ -1213,63 +1213,11 @@ char *_get_backend_cmd(char *type)
 
 int main(int argc, char *argv[])
 {
-	FILE *fp_status = NULL;
-	char buf[32] = { 0, };
-	pid_t pid;
-	char *backend_cmd = NULL;
-	char *backend_name = NULL;
 	int r;
-
-	DBG("server start");
-
-	if (argv[1] && (strcmp(argv[1], "init") == 0)) {
-		/* if current status is "processing",
-		   execute related backend with '-r' option */
-		if (!(fp_status = fopen(STATUS_FILE, "r")))
-			return 0;	/*if file is not exist, terminated. */
-		/* if processing <-- unintended termination */
-		if (fgets(buf, 32, fp_status) &&
-				strcmp(buf, "processing") == 0) {
-			pid = fork();
-			if (pid == 0) {	/* child */
-				if (fgets(buf, 32, fp_status))
-					backend_cmd = _get_backend_cmd(buf);
-				if (!backend_cmd) {	/* if NULL, */
-					DBG("fail to get backend command");
-					goto err;
-				}
-				backend_name =
-					strrchr(backend_cmd, '/');
-				if (!backend_name) {
-					DBG("fail to get backend name");
-					goto err;
-				}
-
-				execl(backend_cmd, backend_name, "-r",
-						NULL);
-				if (backend_cmd)
-					free(backend_cmd);
-				fprintf(fp_status, " ");
-err:
-				fclose(fp_status);
-				exit(13);
-			} else if (pid < 0) {	/* error */
-				DBG("fork fail");
-				fclose(fp_status);
-				return 0;
-			} else {	/* parent */
-
-				DBG("parent end\n");
-				fprintf(fp_status, " ");
-				fclose(fp_status);
-				return 0;
-			}
-		}
-	}
 
 	r = _pm_queue_init();
 	if (r) {
-		DBG("Queue Initialization Failed\n");
+		DBG("Queue Initialization Failed");
 		return -1;
 	}
 
@@ -1298,8 +1246,6 @@ err:
 		ERR("g_main_loop_new failed");
 		return -1;
 	}
-
-	DBG("Main loop is created.");
 
 	g_main_loop_run(mainloop);
 

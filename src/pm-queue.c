@@ -466,24 +466,6 @@ void _pm_queue_delete(pm_dbus_msg *item)
 	}
 }
 
-void _save_queue_status(pm_dbus_msg *item, char *status)
-{
-	FILE *fp_status = NULL;
-
-	fp_status = fopen(STATUS_FILE, "w");	/* overwrite always */
-	if (!fp_status) {
-		ERR("Can't open status file:%s", STATUS_FILE);
-		return;
-	}
-
-	fprintf(fp_status, "%s\n", status);
-	fprintf(fp_status, "%s\n", item->pkg_type);
-
-	fsync(fileno(fp_status));
-
-	fclose(fp_status);
-}
-
 void _print_queue(int position)
 {
 	pm_queue_data *cur = NULL;

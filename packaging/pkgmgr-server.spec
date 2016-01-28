@@ -65,5 +65,4 @@ install -m 0600 blacklist.db %{buildroot}%{_localstatedir}/package-manager/
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server
 %config(noreplace) %{_localstatedir}/package-manager/blacklist.db
-%exclude %{_sysconfdir}/package-manager/server/queue_status
 /usr/share/license/%{name}
