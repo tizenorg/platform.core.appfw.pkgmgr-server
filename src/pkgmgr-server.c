@@ -1020,9 +1020,6 @@ gboolean queue_job(void *data)
 	if (x == num_of_backends)
 		return FALSE;
 
-	__set_backend_busy(x);
-	__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
-
 	/*save pkg type and pkg name for future*/
 	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
 	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
@@ -1032,15 +1029,23 @@ gboolean queue_job(void *data)
 
 	switch (item->req_type) {
 	case PKGMGR_REQUEST_TYPE_INSTALL:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_install(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_REINSTALL:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_reinstall(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_UNINSTALL:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_uninstall(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_MOVE:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_move(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_ENABLE:
@@ -1050,12 +1055,18 @@ gboolean queue_job(void *data)
 		ret = __process_disable(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_GETSIZE:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_getsize(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_CLEARDATA:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_cleardata(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_CLEARCACHE:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_clearcache(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP:
