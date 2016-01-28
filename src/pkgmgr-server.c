@@ -679,7 +679,7 @@ void __set_environment(gpointer user_data)
 		DBG("Failed to set env for the user : %d", ctx->uid);
 }
 
-static int __exec_with_arg_vector(const char *cmd, char **argv, uid_t uid)
+static int __fork_and_exec_with_args(char **argv, uid_t uid)
 {
 	user_ctx* user_context;
 	GError *error = NULL;
@@ -721,7 +721,7 @@ static int __process_install(pm_dbus_msg *item)
 
 	argv = __generate_argv(args);
 
-	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 	g_strfreev(argv);
 	free(backend_cmd);
 
@@ -743,7 +743,7 @@ static int __process_reinstall(pm_dbus_msg *item)
 			item->req_id, item->pkgid);
 	argv = __generate_argv(args);
 
-	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -766,7 +766,7 @@ static int __process_uninstall(pm_dbus_msg *item)
 			item->req_id, item->pkgid);
 	argv = __generate_argv(args);
 
-	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -790,7 +790,7 @@ static int __process_move(pm_dbus_msg *item)
 			item->req_id, item->pkgid, item->args);
 	argv = __generate_argv(args);
 
-	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -824,14 +824,15 @@ static int __process_disable_global_app(pm_dbus_msg *item)
 
 static int __process_getsize(pm_dbus_msg *item)
 {
+	static const char *backend_cmd = "/usr/bin/pkg_getsize";
 	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
 	int pid;
 
-	snprintf(args, sizeof(args), "%s %s -k %s", item->pkgid, item->args,
-			item->req_id);
+	snprintf(args, sizeof(args), "%s %s %s -k %s", backend_cmd, item->pkgid,
+			item->args, item->req_id);
 	argv = __generate_argv(args);
-	pid = __exec_with_arg_vector("/usr/bin/pkg_getsize", argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 
@@ -854,7 +855,7 @@ static int __process_cleardata(pm_dbus_msg *item)
 			item->req_id, item->pkgid);
 	argv = __generate_argv(args);
 
-	pid = __exec_with_arg_vector(backend_cmd, argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -864,13 +865,14 @@ static int __process_cleardata(pm_dbus_msg *item)
 
 static int __process_clearcache(pm_dbus_msg *item)
 {
+	static const char *backend_cmd = "/usr/bin/pkg_clearcache";
 	char **argv;
 	char args[MAX_PKG_ARGS_LEN];
 	int pid;
 
-	snprintf(args, sizeof(args), "%s", item->pkgid);
+	snprintf(args, sizeof(args), "%s %s", backend_cmd, item->pkgid);
 	argv = __generate_argv(args);
-	pid = __exec_with_arg_vector("/usr/bin/pkg_clearcache", argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, item->uid);
 
 	g_strfreev(argv);
 
