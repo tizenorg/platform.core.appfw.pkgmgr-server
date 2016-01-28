@@ -56,21 +56,25 @@ static const char instropection_xml[] =
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='appid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
 	"    <method name='disable_app'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='appid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
-	"    <method name='enable_global_app'>"
+	"    <method name='enable_global_app_for_uid'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='appid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
-	"    <method name='disable_global_app'>"
+	"    <method name='disable_global_app_for_uid'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='appid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
 	"    <method name='getsize'>"
 	"      <arg type='u' name='uid' direction='in'/>"
@@ -321,7 +325,7 @@ static int __handle_request_move(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_enable(uid_t uid,
+static int __handle_request_enable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
@@ -334,7 +338,7 @@ static int __handle_request_enable(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE, "none",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, "none",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -347,7 +351,7 @@ static int __handle_request_enable(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_disable(uid_t uid,
+static int __handle_request_disable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
@@ -360,7 +364,7 @@ static int __handle_request_disable(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE, "none",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, "none",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -373,11 +377,13 @@ static int __handle_request_disable(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_enable_global_app(uid_t uid,
+static int __handle_request_enable_app(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
 	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = -1;
 
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
@@ -386,24 +392,39 @@ static int __handle_request_enable_global_app(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP, "none",
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_APP, "none",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		return -1;
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
 	}
 
 	g_dbus_method_invocation_return_value(invocation,
-			g_variant_new("(i)", PKGMGR_R_OK));
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
 
-	return 0;
+	ret = 0;
+
+catch:
+	if(reqkey)
+		free(reqkey);
+
+	return ret;
 }
 
-static int __handle_request_disable_global_app(uid_t uid,
+static int __handle_request_disable_app(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
 	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = -1;
 
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
@@ -412,17 +433,112 @@ static int __handle_request_disable_global_app(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP, "none",
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_APP, "none",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		return -1;
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
 	}
 
 	g_dbus_method_invocation_return_value(invocation,
-			g_variant_new("(i)", PKGMGR_R_OK));
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
 
-	return 0;
+	ret = 0;
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
+static int __handle_request_enable_global_app_for_uid(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = -1;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID, "none",
+				appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
+
+	ret = 0;
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
+static int __handle_request_disable_global_app_for_uid(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = -1;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID, "none",
+				appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
+
+	ret = 0;
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
 }
 
 static int __handle_request_getsize(uid_t uid,
@@ -723,17 +839,21 @@ static void __handle_method_call(GDBusConnection *connection,
 	else if (g_strcmp0(method_name, "move") == 0)
 		ret = __handle_request_move(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "enable") == 0)
-		ret = __handle_request_enable(uid, invocation, parameters);
+		ret = __handle_request_enable_pkg(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "disable") == 0)
-		ret = __handle_request_disable(uid, invocation, parameters);
+		ret = __handle_request_disable_pkg(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "getsize") == 0)
 		ret = __handle_request_getsize(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "clearcache") == 0)
 		ret = __handle_request_clearcache(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "enable_global_app") == 0)
-		ret = __handle_request_enable_global_app(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "disable_global_app") == 0)
-		ret = __handle_request_disable_global_app(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_app") == 0)
+		ret = __handle_request_enable_app(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "disable_app") == 0)
+		ret = __handle_request_disable_app(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_global_app_for_uid") == 0)
+		ret = __handle_request_enable_global_app_for_uid(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "disable_global_app_for_uid") == 0)
+		ret = __handle_request_disable_global_app_for_uid(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "kill") == 0)
 		ret = __handle_request_kill(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "check") == 0)
