@@ -735,7 +735,21 @@ void __change_item_info(pm_dbus_msg *item, uid_t uid)
 	char *pkgid = NULL;
 	pkgmgrinfo_appinfo_h handle = NULL;
 
-	ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
+	switch (item->req_type) {
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP:
+	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID:
+		ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
+		break;
+
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP:
+	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID:
+		ret = pkgmgrinfo_appinfo_get_usr_disabled_appinfo(item->pkgid, uid, &handle);
+		break;
+
+	default:
+		return;
+	}
+
 	if (ret != PMINFO_R_OK)
 		return;
 
@@ -1188,7 +1202,7 @@ gboolean queue_job(void *data)
 	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
 	memset((item->appid),0,MAX_PKG_NAME_LEN);
 	ptr->uid = item->uid;
-	DBG("handle request type [%d]", ptr->pid, item->req_type);
+	DBG("handle request type [%d]", item->req_type);
 
 	switch (item->req_type) {
 	case PKGMGR_REQUEST_TYPE_INSTALL:

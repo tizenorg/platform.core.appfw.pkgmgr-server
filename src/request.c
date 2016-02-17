@@ -404,7 +404,7 @@ static int __handle_request_enable_app(uid_t uid,
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		return -1;
 	}
 
@@ -445,7 +445,7 @@ static int __handle_request_disable_app(uid_t uid,
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		return -1;
 	}
 
@@ -486,7 +486,7 @@ static int __handle_request_enable_global_app_for_uid(uid_t uid,
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		return -1;
 	}
 
@@ -527,7 +527,7 @@ static int __handle_request_disable_global_app_for_uid(uid_t uid,
 	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
 	if (target_uid == (uid_t)-1 || appid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		return -1;
 	}
 
