@@ -1317,11 +1317,17 @@ char *_get_backend_cmd(char *type)
 	FILE *fp = NULL;
 	char buffer[1024] = { 0 };
 	char *command = NULL;
+	char *backend_type = NULL;
 	int size = 0;
 	fp = fopen(PKG_CONF_PATH, "r");
 	if (fp == NULL) {
 		return NULL;
 	}
+
+	if (strcmp(type, "rpm") == 0)
+		backend_type = "tpk";
+	else
+		backend_type = type;
 
 	char *path = NULL;
 	while (fgets(buffer, 1024, fp) != NULL) {
@@ -1337,15 +1343,15 @@ char *_get_backend_cmd(char *type)
 
 			command =
 			    (char *)malloc(sizeof(char) * strlen(path) +
-					   strlen(type) + 1);
+					   strlen(backend_type) + 1);
 			if (command == NULL) {
 				fclose(fp);
 				return NULL;
 			}
 
-			size = strlen(path) + strlen(type) + 1;
-			snprintf(command, size, "%s%s", path, type);
-			command[strlen(path) + strlen(type)] = '\0';
+			size = strlen(path) + strlen(backend_type) + 1;
+			snprintf(command, size, "%s%s", path, backend_type);
+			command[strlen(path) + strlen(backend_type)] = '\0';
 			DBG("command [%s]", command);
 
 			if (fp != NULL)
