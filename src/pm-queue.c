@@ -28,10 +28,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <tzplatform_config.h>
+
 #include "pkgmgr-server.h"
 #include "pm-queue.h"
 
-#define BACKEND_INFO_DIR	"/etc/package-manager/backend"
+
+#define BACKEND_INFO_DIR	tzplatform_mkpath(TZ_SYS_ETC, "/package-manager/backend")
 
 static pm_queue_data *__get_head_from_pkgtype(const char *pkg_type);
 static void __update_head_from_pkgtype(pm_queue_data *data);
@@ -156,8 +159,7 @@ int _pm_queue_init(void)
 	}
 	i = n;
 	/*Find number of backends (symlinks + executables)
-	The /usr/etc/package-manager/backend dir should not conatin
-	any other file except the backends.*/
+	The backend dir should not conatin any other file except the backends.*/
 	while(n--)
 	{
 		if(!strcmp(namelist[n]->d_name, ".") ||
