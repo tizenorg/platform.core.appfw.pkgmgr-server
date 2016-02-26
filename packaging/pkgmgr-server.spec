@@ -36,11 +36,12 @@ Packager Manager server package for packaging
 cp %{SOURCE1001} .
 
 %define db_dir %{_localstatedir}/lib/package-manager
+%define backend_dir %{_sysconfdir}/package-manager/backend
 
 %build
 sqlite3 blacklist.db < ./blacklist.sql
 
-%cmake . -DDB_DIR=%{db_dir}
+%cmake . -DDB_DIR=%{db_dir} -DBACKEND_DIR=%{backend_dir}
 
 %__make %{?_smp_mflags}
 

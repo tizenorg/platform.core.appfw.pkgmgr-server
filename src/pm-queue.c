@@ -31,7 +31,9 @@
 #include "pkgmgr-server.h"
 #include "pm-queue.h"
 
-#define BACKEND_INFO_DIR	"/etc/package-manager/backend"
+#ifndef BACKEND_DIR
+#define BACKEND_DIR "/etc/package-manager/backend"
+#endif
 
 static pm_queue_data *__get_head_from_pkgtype(const char *pkg_type);
 static void __update_head_from_pkgtype(pm_queue_data *data);
@@ -149,22 +151,21 @@ int _pm_queue_init(void)
 	int ret = 0;
 	char abs_filename[MAX_PKG_NAME_LEN] = {'\0'};
 	char buf[MAX_PKG_NAME_LEN] = {'\0'};
-	n = scandir(BACKEND_INFO_DIR, &namelist, NULL, alphasort);
+	n = scandir(BACKEND_DIR, &namelist, NULL, alphasort);
 	if (n < 0) {
 		perror("scandir");
 		return -1;
 	}
 	i = n;
 	/*Find number of backends (symlinks + executables)
-	The /usr/etc/package-manager/backend dir should not conatin
-	any other file except the backends.*/
+	The backend dir should not conatin any other file except the backends.*/
 	while(n--)
 	{
 		if(!strcmp(namelist[n]->d_name, ".") ||
 			!strcmp(namelist[n]->d_name, ".."))
 				continue;
 		snprintf(abs_filename, MAX_PKG_NAME_LEN, "%s/%s",
-			BACKEND_INFO_DIR, namelist[n]->d_name);
+			BACKEND_DIR, namelist[n]->d_name);
 		if (lstat(abs_filename, &fileinfo)) {
 			perror("lstat");
 			continue;
@@ -194,7 +195,7 @@ int _pm_queue_init(void)
 			!strcmp(namelist[n]->d_name, ".."))
 				continue;
 		snprintf(abs_filename, MAX_PKG_NAME_LEN, "%s/%s",
-			BACKEND_INFO_DIR, namelist[n]->d_name);
+			BACKEND_DIR, namelist[n]->d_name);
 		if (lstat(abs_filename, &fileinfo) < 0) {
 			perror(abs_filename);
 			return -1;
