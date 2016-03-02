@@ -215,6 +215,8 @@ static void __send_app_signal(uid_t uid, const char *req_id,
 		return;
 	}
 
+	if (pkgmgr_installer_set_uid(pi, uid))
+		goto catch;
 	if (pkgmgr_installer_set_request_type(pi,PKGMGR_REQ_ENABLE_DISABLE_APP))
 		goto catch;
 	if (pkgmgr_installer_set_session_id(pi, req_id))
@@ -875,20 +877,29 @@ static int __process_enable_app(pm_dbus_msg *item)
 {
 	int ret = -1;
 
-	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_app");
+	__send_app_signal(item->uid, item->req_id, item->pkg_type,
+			item->pkgid, item->pkgid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_APP_ENABLE_EVENT_STR);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
 	__change_item_info(item, item->uid);
 	if (strlen(item->appid) == 0) {
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->pkgid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 		return ret;
 	}
 
 	ret = pkgmgr_parser_update_app_disable_info_in_usr_db(item->appid, item->uid, 0);
 	if (ret != PMINFO_R_OK)
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 	else
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_OK_EVENT_STR);
 
 	return ret;
 }
@@ -897,20 +908,29 @@ static int __process_disable_app(pm_dbus_msg *item)
 {
 	int ret = -1;
 
-	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_app");
+	__send_app_signal(item->uid, item->req_id, item->pkg_type,
+			item->pkgid, item->pkgid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_APP_DISABLE_EVENT_STR);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
 	__change_item_info(item, item->uid);
 	if (strlen(item->appid) == 0) {
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->pkgid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 		return ret;
 	}
 
 	ret = pkgmgr_parser_update_app_disable_info_in_usr_db(item->appid, item->uid, 1);
 	if (ret != PMINFO_R_OK)
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 	else
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_OK_EVENT_STR);
 
 	return ret;
 }
@@ -919,20 +939,29 @@ static int __process_enable_global_app_for_uid(pm_dbus_msg *item)
 {
 	int ret = -1;
 
-	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "enable_global_app_for_uid");
+	__send_app_signal(item->uid, item->req_id, item->pkg_type,
+			item->pkgid, item->pkgid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_GLOBAL_APP_ENABLE_FOR_UID);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	__change_item_info(item, GLOBAL_USER);
+	__change_item_info(item, item->uid);
 	if (strlen(item->appid) == 0) {
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->pkgid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 		return ret;
 	}
 
 	ret = pkgmgr_parser_update_global_app_disable_for_uid_info_in_db(item->appid, item->uid, 0);
 	if (ret != PMINFO_R_OK)
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 	else
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_OK_EVENT_STR);
 
 	return ret;
 }
@@ -941,20 +970,29 @@ static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
 {
 	int ret = -1;
 
-	__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "start", "disable_global_app_for_uid");
+	__send_app_signal(item->uid, item->req_id, item->pkg_type,
+			item->pkgid, item->pkgid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_GLOBAL_APP_DISABLE_FOR_UID);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
 	__change_item_info(item, GLOBAL_USER);
 	if (strlen(item->appid) == 0) {
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->pkgid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->pkgid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 		return ret;
 	}
 
 	ret = pkgmgr_parser_update_global_app_disable_for_uid_info_in_db(item->appid, item->uid, 1);
 	if (ret != PMINFO_R_OK)
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "fail");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 	else
-		__send_app_signal(item->uid, item->req_id, item->pkg_type, item->pkgid, item->appid, "end", "ok");
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_OK_EVENT_STR);
 
 	return ret;
 }
