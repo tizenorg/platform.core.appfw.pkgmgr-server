@@ -892,14 +892,14 @@ static int __handle_request_check_blacklist(uid_t uid,
 	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
 	if (target_uid == (uid_t)-1 || pkgid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
+				g_variant_new("(ii)", PKGMGR_R_ECOMM, -1));
 		return -1;
 	}
 
 	reqkey = __generate_reqkey("blacklist");
 	if (reqkey == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ENOMEM));
+				g_variant_new("(ii)", PKGMGR_R_ENOMEM, -1));
 		return -1;
 	}
 
@@ -907,7 +907,7 @@ static int __handle_request_check_blacklist(uid_t uid,
 				PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
 				"pkg", pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+				g_variant_new("(ii)", PKGMGR_R_ESYSTEM, -1));
 		free(reqkey);
 		return -1;
 	}
