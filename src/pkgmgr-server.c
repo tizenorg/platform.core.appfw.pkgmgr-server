@@ -599,7 +599,7 @@ int set_environement(user_ctx *ctx)
 	return res;
 }
 
-user_ctx* get_user_context(uid_t uid)
+user_ctx *get_user_context(uid_t uid)
 {
 	/* we can use getpwnam because this is used only after a
 	 * fork and just before an execv
@@ -608,9 +608,10 @@ user_ctx* get_user_context(uid_t uid)
 	 */
 	user_ctx *context_res;
 	char **env = NULL;
-	struct passwd * pwd;
+	struct passwd *pwd;
 	int len;
 	int ret = 0;
+	int i;
 
 	pwd = getpwuid(uid);
 	if (!pwd)
@@ -622,34 +623,33 @@ user_ctx* get_user_context(uid_t uid)
 			ret = -1;
 			break;
 		}
-		env = (char**)malloc(3* sizeof(char *));
+		env = (char **)malloc(3 * sizeof(char *));
 		if (!env) {
 			ret = -1;
 			break;
 		}
 		// Build environment context
-		len = snprintf(NULL,0, "HOME=%s", pwd->pw_dir);
-		env[0] = (char*)malloc((len + 1)* sizeof(char));
+		len = snprintf(NULL, 0, "HOME=%s", pwd->pw_dir);
+		env[0] = (char *)malloc((len + 1) * sizeof(char));
 		if(env[0] == NULL) {
 			ret = -1;
 			break;
 		}
-		sprintf(env[0], "HOME=%s", pwd->pw_dir);
-		len = snprintf(NULL,0, "USER=%s", pwd->pw_name);
-		env[1] = (char*)malloc((len + 1)* sizeof(char));
+		snprintf(env[0], len + 1, "HOME=%s", pwd->pw_dir);
+		len = snprintf(NULL, 0, "USER=%s", pwd->pw_name);
+		env[1] = (char *)malloc((len + 1) * sizeof(char));
 		if(env[1] == NULL) {
 			ret = -1;
 			break;
 		}
-
-		sprintf(env[1], "USER=%s", pwd->pw_name);
+		snprintf(env[1], len + 1, "USER=%s", pwd->pw_name);
 		env[2] = NULL;
 	} while (0);
 
 	if (ret == -1) {
 		free(context_res);
 		context_res = NULL;
-		int i = 0;
+		i = 0;
 		//env variable ends by NULL element
 		while (env && env[i]) {
 			free(env[i]);
@@ -680,8 +680,7 @@ static char **__generate_argv(const char *args)
 	GError *gerr = NULL;
 	int i;
 
-	ret_parse = g_shell_parse_argv(args,
-			&argcp, &argvp, &gerr);
+	ret_parse = g_shell_parse_argv(args, &argcp, &argvp, &gerr);
 	if (FALSE == ret_parse) {
 		DBG("Failed to split args: %s", args);
 		DBG("messsage: %s", gerr->message);
