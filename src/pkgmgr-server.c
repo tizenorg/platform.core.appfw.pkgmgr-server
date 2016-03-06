@@ -634,7 +634,7 @@ user_ctx* get_user_context(uid_t uid)
 			ret = -1;
 			break;
 		}
-		sprintf(env[0], "HOME=%s", pwd->pw_dir);
+		snprintf(env[0], len, "HOME=%s", pwd->pw_dir);
 		len = snprintf(NULL,0, "USER=%s", pwd->pw_name);
 		env[1] = (char*)malloc((len + 1)* sizeof(char));
 		if(env[1] == NULL) {
@@ -642,7 +642,7 @@ user_ctx* get_user_context(uid_t uid)
 			break;
 		}
 
-		sprintf(env[1], "USER=%s", pwd->pw_name);
+		snprintf(env[1], len,  "USER=%s", pwd->pw_name);
 		env[2] = NULL;
 	} while (0);
 
