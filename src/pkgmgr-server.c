@@ -38,7 +38,7 @@
 #include <gio/gio.h>
 
 #include <pkgmgr-info.h>
-#include <pkgmgr/pkgmgr_parser.h>
+#include <pkgmgr/pkgmgr_parser_db.h>
 #include <tzplatform_config.h>
 #include <drm-tizen-apps.h>
 
