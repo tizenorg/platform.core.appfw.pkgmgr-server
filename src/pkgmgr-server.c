@@ -730,41 +730,59 @@ static int __fork_and_exec_with_args(char **argv, uid_t uid)
 	return pid;
 }
 
-void __change_item_info(pm_dbus_msg *item, uid_t uid)
+static int __change_item_info(pm_dbus_msg *item, uid_t uid)
 {
 	int ret = 0;
 	char *pkgid = NULL;
+	bool is_global = false;
 	pkgmgrinfo_appinfo_h handle = NULL;
 
 	switch (item->req_type) {
 	case PKGMGR_REQUEST_TYPE_DISABLE_APP:
 	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID:
 		ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
-		break;
+ 		break;
 
 	case PKGMGR_REQUEST_TYPE_ENABLE_APP:
 	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID:
 		ret = pkgmgrinfo_appinfo_get_usr_disabled_appinfo(item->pkgid, uid, &handle);
-		break;
+ 		break;
 
 	default:
-		return;
+		return PMINFO_R_ERROR;
 	}
 
 	if (ret != PMINFO_R_OK)
-		return;
+		return PMINFO_R_ERROR;
+
+	ret = pkgmgrinfo_appinfo_is_global(handle, &is_global);
+	if (ret != PMINFO_R_OK)
+		goto catch;
+
+	if ((item->req_type == PKGMGR_REQUEST_TYPE_DISABLE_APP
+			|| item->req_type == PKGMGR_REQUEST_TYPE_ENABLE_APP)
+			&& is_global) {
+			ret = PMINFO_R_ERROR;
+			goto catch;
+	} else if ((item->req_type == PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID
+			|| item->req_type == PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID)
+			&& !is_global) {
+			ret = PMINFO_R_ERROR;
+			goto catch;
+	}
 
 	ret = pkgmgrinfo_appinfo_get_pkgid(handle, &pkgid);
-	if (ret != PMINFO_R_OK) {
-		pkgmgrinfo_appinfo_destroy_appinfo(handle);
-		return;
-	}
+	if (ret != PMINFO_R_OK)
+		goto catch;
 
 	strncpy(item->appid, item->pkgid, sizeof(item->pkgid) - 1);
 	memset((item->pkgid),0,MAX_PKG_NAME_LEN);
 	strncpy(item->pkgid, pkgid, sizeof(item->pkgid) - 1);
 
+catch:
 	pkgmgrinfo_appinfo_destroy_appinfo(handle);
+
+	return ret;
 }
 
 static int __process_install(pm_dbus_msg *item)
@@ -882,8 +900,8 @@ static int __process_enable_app(pm_dbus_msg *item)
 			PKGMGR_INSTALLER_APP_ENABLE_EVENT_STR);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	__change_item_info(item, item->uid);
-	if (strlen(item->appid) == 0) {
+	ret = __change_item_info(item, item->uid);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkg_type,
 				item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
@@ -913,8 +931,8 @@ static int __process_disable_app(pm_dbus_msg *item)
 			PKGMGR_INSTALLER_APP_DISABLE_EVENT_STR);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	__change_item_info(item, item->uid);
-	if (strlen(item->appid) == 0) {
+	ret = __change_item_info(item, item->uid);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkg_type,
 				item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
@@ -944,8 +962,8 @@ static int __process_enable_global_app_for_uid(pm_dbus_msg *item)
 			PKGMGR_INSTALLER_GLOBAL_APP_ENABLE_FOR_UID);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	__change_item_info(item, item->uid);
-	if (strlen(item->appid) == 0) {
+	ret = __change_item_info(item, item->uid);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkg_type,
 				item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
@@ -975,8 +993,8 @@ static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
 			PKGMGR_INSTALLER_GLOBAL_APP_DISABLE_FOR_UID);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	__change_item_info(item, GLOBAL_USER);
-	if (strlen(item->appid) == 0) {
+	ret = __change_item_info(item, GLOBAL_USER);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkg_type,
 				item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
