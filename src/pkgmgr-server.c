@@ -336,10 +336,11 @@ static void __fini_backend_info(void)
 static void sighandler(int signo)
 {
 	struct signal_info_t info;
+	char buf[1024] = {0, };
 
 	info.pid = waitpid(-1, &info.status, WNOHANG);
 	if (write(pipe_sig[1], &info, sizeof(struct signal_info_t)) < 0)
-		ERR("failed to write result: %s", strerror(errno));
+		ERR("failed to write result: %s", strerror_r(errno, buf, sizeof(buf)));
 }
 
 static int __register_signal_handler(void)
@@ -456,7 +457,7 @@ static int __pkgcmd_find_pid_by_cmdline(const char *dname,
 static int __pkgcmd_proc_iter_kill_cmdline(const char *apppath, int option)
 {
 	DIR *dp;
-	struct dirent *dentry;
+	struct dirent dentry, *result;
 	int pid;
 	int ret;
 	char buf[1024] = {'\0'};
@@ -467,16 +468,18 @@ static int __pkgcmd_proc_iter_kill_cmdline(const char *apppath, int option)
 		return -1;
 	}
 
-	while ((dentry = readdir(dp)) != NULL) {
-		if (!isdigit(dentry->d_name[0]))
+	for (ret = readdir_r(dp, &dentry, &result);
+			ret == 0 && result != NULL;
+			ret = readdir_r(dp, &dentry, &result)) {
+		if (!isdigit(dentry.d_name[0]))
 			continue;
 
-		snprintf(buf, sizeof(buf), "/proc/%s/cmdline", dentry->d_name);
+		snprintf(buf, sizeof(buf), "/proc/%s/cmdline", dentry.d_name);
 		ret = __pkgcmd_read_proc(buf, buf, sizeof(buf));
 		if (ret <= 0)
 			continue;
 
-		pid = __pkgcmd_find_pid_by_cmdline(dentry->d_name, buf, apppath);
+		pid = __pkgcmd_find_pid_by_cmdline(dentry.d_name, buf, apppath);
 		if (pid > 0) {
 			if (option == 0) {
 				closedir(dp);
@@ -610,13 +613,14 @@ user_ctx *get_user_context(uid_t uid)
 	 */
 	user_ctx *context_res;
 	char **env = NULL;
-	struct passwd *pwd;
+	char buf[1024] = {0, };
+	struct passwd pwd, *result;
 	int len;
 	int ret = 0;
 	int i;
 
-	pwd = getpwuid(uid);
-	if (!pwd)
+	ret = getpwuid_r(uid, &pwd, buf, sizeof(buf), &result);
+	if (ret != 0 || result == NULL)
 		return NULL;
 
 	do {
@@ -631,20 +635,20 @@ user_ctx *get_user_context(uid_t uid)
 			break;
 		}
 		// Build environment context
-		len = snprintf(NULL, 0, "HOME=%s", pwd->pw_dir);
+		len = snprintf(NULL, 0, "HOME=%s", pwd.pw_dir);
 		env[0] = (char *)malloc((len + 1) * sizeof(char));
 		if(env[0] == NULL) {
 			ret = -1;
 			break;
 		}
-		snprintf(env[0], len + 1, "HOME=%s", pwd->pw_dir);
-		len = snprintf(NULL, 0, "USER=%s", pwd->pw_name);
+		snprintf(env[0], len + 1, "HOME=%s", pwd.pw_dir);
+		len = snprintf(NULL, 0, "USER=%s", pwd.pw_name);
 		env[1] = (char *)malloc((len + 1) * sizeof(char));
 		if(env[1] == NULL) {
 			ret = -1;
 			break;
 		}
-		snprintf(env[1], len + 1, "USER=%s", pwd->pw_name);
+		snprintf(env[1], len + 1, "USER=%s", pwd.pw_name);
 		env[2] = NULL;
 	} while (0);
 
@@ -662,7 +666,7 @@ user_ctx *get_user_context(uid_t uid)
 	} else {
 		context_res->env = env;
 		context_res->uid = uid;
-		context_res->gid = pwd->pw_gid;
+		context_res->gid = pwd.pw_gid;
 	}
 	return context_res;
 }
