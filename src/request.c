@@ -356,7 +356,7 @@ static int __handle_request_enable_pkg(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, &pkgtype,
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, pkgtype,
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -383,7 +383,7 @@ static int __handle_request_disable_pkg(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, &pkgtype,
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, pkgtype,
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
