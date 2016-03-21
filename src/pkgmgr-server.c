@@ -530,6 +530,31 @@ static void __make_pid_info_file(char *req_key, int pid)
 	fclose(file);
 }
 
+static int __kill_app(char *appid, uid_t uid)
+{
+	pkgmgrinfo_appinfo_h appinfo;
+	int ret = PMINFO_R_ERROR;
+	char *exec = NULL;
+
+	ret = pkgmgrinfo_appinfo_get_usr_appinfo(appid, uid, &appinfo);
+	if (ret != PMINFO_R_OK)
+		return PMINFO_R_ERROR;
+
+	ret = pkgmgrinfo_appinfo_get_exec(appinfo, &exec);
+	if (ret != PMINFO_R_OK) {
+		pkgmgrinfo_appinfo_destroy_appinfo(appinfo);
+		return PMINFO_R_ERROR;
+	}
+
+	ret = __pkgcmd_proc_iter_kill_cmdline(exec, 1);
+	if (ret != PMINFO_R_OK) {
+		DBG("failed to kill app[%s], exec[%s]", appid, exec);
+	}
+
+	pkgmgrinfo_appinfo_destroy_appinfo(appinfo);
+	return ret;
+}
+
 static int __pkgcmd_app_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 {
 	char *pkgid;
@@ -943,6 +968,13 @@ static int __process_disable_app(pm_dbus_msg *item)
 		return ret;
 	}
 
+	ret = __kill_app(item->appid, item->uid);
+	if (ret != PMINFO_R_OK) {
+		__send_app_signal(item->uid, item->req_id, item->pkg_type,
+				item->pkgid, item->appid,
+				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
+	}
+
 	ret = pkgmgr_parser_update_app_disable_info_in_usr_db(item->appid, item->uid, 1);
 	if (ret != PMINFO_R_OK)
 		__send_app_signal(item->uid, item->req_id, item->pkg_type,
@@ -1004,6 +1036,8 @@ static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR);
 		return ret;
 	}
+
+	ret = __kill_app(item->appid, item->uid);
 
 	ret = pkgmgr_parser_update_global_app_disable_for_uid_info_in_db(item->appid, item->uid, 1);
 	if (ret != PMINFO_R_OK)
