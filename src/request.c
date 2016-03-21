@@ -44,11 +44,13 @@ static const char instropection_xml[] =
 	"    </method>"
 	"    <method name='enable_pkg'>"
 	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgtype' direction='in'/>"
 	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
 	"    <method name='disable_pkg'>"
 	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgtype' direction='in'/>"
 	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
@@ -344,16 +346,17 @@ static int __handle_request_enable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
+	char *pkgtype = NULL;
 	char *pkgid = NULL;
 
-	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgid);
 	if (target_uid == (uid_t)-1 || pkgid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_ENABLE_PKG, &pkgtype,
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -370,16 +373,17 @@ static int __handle_request_disable_pkg(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
+	char *pkgtype = NULL;
 	char *pkgid = NULL;
 
-	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
+	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgid);
 	if (target_uid == (uid_t)-1 || pkgid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_DISABLE_PKG, &pkgtype,
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -413,7 +417,7 @@ static int __handle_request_enable_app(uid_t uid,
 		goto catch;
 	}
 
-	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_APP, "app",
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_APP, "default",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
@@ -454,7 +458,7 @@ static int __handle_request_disable_app(uid_t uid,
 		goto catch;
 	}
 
-	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_APP, "app",
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_APP, "default",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
@@ -495,7 +499,7 @@ static int __handle_request_enable_global_app_for_uid(uid_t uid,
 		goto catch;
 	}
 
-	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID, "app",
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID, "default",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
@@ -536,7 +540,7 @@ static int __handle_request_disable_global_app_for_uid(uid_t uid,
 		goto catch;
 	}
 
-	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID, "app",
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID, "default",
 				appid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
@@ -577,7 +581,7 @@ static int __handle_request_getsize(uid_t uid,
 		return -1;
 
 	snprintf(buf, sizeof(buf), "%d", get_type);
-	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_GETSIZE, "getsize",
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_GETSIZE, "pkgtool",
 				pkgid, buf)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
@@ -606,7 +610,7 @@ static int __handle_request_cleardata(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CLEARDATA, pkgtype,
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CLEARDATA, "pkgtool",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -633,7 +637,7 @@ static int __handle_request_clearcache(uid_t uid,
 	}
 
 	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CLEARCACHE,
-				"clearcache", pkgid, "")) {
+				"pkgtool",  pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		return -1;
@@ -658,7 +662,7 @@ static int __handle_request_kill(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_KILL, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_KILL, "default",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -684,7 +688,7 @@ static int __handle_request_check(uid_t uid,
 		return -1;
 	}
 
-	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CHECK, "pkg",
+	if (_pm_queue_push(target_uid, "", PKGMGR_REQUEST_TYPE_CHECK, "default",
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
@@ -720,7 +724,7 @@ static int __handle_request_generate_license_request(uid_t uid,
 
 	if (_pm_queue_push(uid, reqkey,
 				PKGMGR_REQUEST_TYPE_GENERATE_LICENSE_REQUEST,
-				"pkg", "", resp_data)) {
+				"default", "", resp_data)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(iss)", PKGMGR_R_ESYSTEM, "",
 					""));
@@ -756,7 +760,7 @@ static int __handle_request_register_license(uid_t uid,
 	}
 
 	if (_pm_queue_push(uid, reqkey, PKGMGR_REQUEST_TYPE_REGISTER_LICENSE,
-				"pkg", "", resp_data)) {
+				"default", "", resp_data)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -793,7 +797,7 @@ static int __handle_request_decrypt_package(uid_t uid,
 	}
 
 	if (_pm_queue_push(uid, reqkey, PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE,
-				"pkg", drm_file_path, decrypted_file_path)) {
+				"default", drm_file_path, decrypted_file_path)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -830,7 +834,7 @@ static int __handle_request_add_blacklist(uid_t uid,
 
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_ADD_BLACKLIST,
-				"pkg", pkgid, "")) {
+				"default",  pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -867,7 +871,7 @@ static int __handle_request_remove_blacklist(uid_t uid,
 
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST,
-				"pkg", pkgid, "")) {
+				"default", pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -904,7 +908,7 @@ static int __handle_request_check_blacklist(uid_t uid,
 
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
-				"pkg", pkgid, "")) {
+				"default", pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(ii)", PKGMGR_R_ESYSTEM, -1));
 		free(reqkey);

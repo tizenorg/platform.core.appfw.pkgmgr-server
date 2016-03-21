@@ -48,7 +48,7 @@ typedef struct queue_info_map_t {
 
 int _pm_queue_init(void);
 int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
-		const char *pkg_type, const char *pkgid, const char *argv);
+		const char *queue_type, const char *pkgid, const char *argv);
 /*position specifies the queue from which to pop request*/
 pm_dbus_msg *_pm_queue_pop(int position);
 void _pm_queue_final();
