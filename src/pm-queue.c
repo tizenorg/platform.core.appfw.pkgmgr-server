@@ -259,17 +259,17 @@ int _pm_queue_init(void)
 }
 
 int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
-		const char *pkg_type, const char *pkgid, const char *args)
+		const char *queue_type, const char *pkgid, const char *args)
 {
 	pm_queue_data *data = NULL;
 	pm_queue_data *cur = NULL;
 	pm_queue_data *tmp = NULL;
 	int ret = 0;
-	ret = __is_pkg_supported(pkg_type);
+	ret = __is_pkg_supported(queue_type);
 	if (ret == 0)
 		return -1;
 
-	cur = __get_head_from_pkgtype(pkg_type);
+	cur = __get_head_from_pkgtype(queue_type);
 	tmp = cur;
 
 	/* TODO: use glist */
@@ -282,7 +282,7 @@ int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
 	snprintf(data->msg->req_id, sizeof(data->msg->req_id), "%s", req_id);
 	data->msg->req_type = req_type;
 	data->msg->uid = uid;
-	snprintf(data->msg->pkg_type, sizeof(data->msg->pkg_type), "%s", pkg_type);
+	snprintf(data->msg->pkg_type, sizeof(data->msg->pkg_type), "%s", queue_type);
 	snprintf(data->msg->pkgid, sizeof(data->msg->pkgid), "%s", pkgid);
 	snprintf(data->msg->args, sizeof(data->msg->args), "%s", args);
 
