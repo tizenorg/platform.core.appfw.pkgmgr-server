@@ -920,14 +920,48 @@ static int __process_move(pm_dbus_msg *item)
 
 static int __process_enable_pkg(pm_dbus_msg *item)
 {
-	/* TODO */
-	return 0;
+	char *backend_cmd;
+	char **argv;
+	char args[MAX_PKG_ARGS_LEN];
+	int pid;
+
+	backend_cmd = _get_backend_cmd(item->pkg_type);
+	if (backend_cmd == NULL)
+		return -1;
+
+	snprintf(args, sizeof(args), "%s -k %s -A %s", backend_cmd,
+			item->req_id, item->pkgid);
+	argv = __generate_argv(args);
+
+	pid = __fork_and_exec_with_args(argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
 static int __process_disable_pkg(pm_dbus_msg *item)
 {
-	/* TODO */
-	return 0;
+	char *backend_cmd;
+	char **argv;
+	char args[MAX_PKG_ARGS_LEN];
+	int pid;
+
+	backend_cmd = _get_backend_cmd(item->pkg_type);
+	if (backend_cmd == NULL)
+		return -1;
+
+	snprintf(args, sizeof(args), "%s -k %s -D %s", backend_cmd,
+			item->req_id, item->pkgid);
+	argv = __generate_argv(args);
+
+	pid = __fork_and_exec_with_args(argv, item->uid);
+
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
 }
 
 static int __process_enable_app(pm_dbus_msg *item)
