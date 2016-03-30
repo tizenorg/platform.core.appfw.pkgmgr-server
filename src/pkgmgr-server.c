@@ -905,7 +905,6 @@ static int __process_move(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	/* TODO: set movetype */
 	snprintf(args, sizeof(args), "%s -k %s -m %s -t %s", backend_cmd,
 			item->req_id, item->pkgid, item->args);
 	argv = __generate_argv(args);
