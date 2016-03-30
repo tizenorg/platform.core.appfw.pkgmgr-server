@@ -39,8 +39,8 @@ static const char instropection_xml[] =
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='pkgtype' direction='in'/>"
 	"      <arg type='s' name='pkgid' direction='in'/>"
+	"		 <arg type='s' name='movetype' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
-	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
 	"    <method name='enable_pkg'>"
 	"      <arg type='u' name='uid' direction='in'/>"
@@ -316,27 +316,29 @@ static int __handle_request_move(uid_t uid,
 	char *pkgtype = NULL;
 	char *pkgid = NULL;
 	char *reqkey;
+	char *move_type = NULL;
 
-	g_variant_get(parameters, "(u&s&s)", &target_uid, &pkgtype, &pkgid);
-	if (target_uid == (uid_t)-1 || pkgtype == NULL || pkgid == NULL) {
+	g_variant_get(parameters, "(u&s&s&s)", &target_uid, &pkgtype, &pkgid, &move_type);
+	if (target_uid == (uid_t)-1 || pkgtype == NULL || pkgid == NULL || move_type == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
 	}
 
 	reqkey = __generate_reqkey(pkgid);
 	if (reqkey == NULL)
 		return -1;
+
 	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_MOVE, pkgtype,
-				pkgid, "")) {
+				pkgid, move_type)) {
 		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
 		return -1;
 	}
 
 	g_dbus_method_invocation_return_value(invocation,
-			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
+			g_variant_new("(i)", PKGMGR_R_OK));
 	free(reqkey);
 
 	return 0;
