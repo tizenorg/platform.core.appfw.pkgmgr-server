@@ -197,7 +197,8 @@ static int __handle_request_install(uid_t uid,
 
 	for (i = 0; i < args_count; i++) {
 		strncat(args, tmp_args[i], strlen(tmp_args[i]));
-		strncat(args, " ", strlen(" "));
+		if (i != args_count - 1)
+			strncat(args, " ", strlen(" "));
 	}
 
 	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
