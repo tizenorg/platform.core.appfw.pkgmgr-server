@@ -858,6 +858,29 @@ static int __process_install(pm_dbus_msg *item)
 	return pid;
 }
 
+static int __process_mount_install(pm_dbus_msg *item)
+{
+	char *backend_cmd;
+	char **argv;
+	char args[MAX_PKG_ARGS_LEN] = {'\0', };
+	int pid;
+
+	backend_cmd = _get_backend_cmd(item->pkg_type);
+	if (backend_cmd == NULL)
+		return -1;
+
+	snprintf(args, sizeof(args), "%s -k %s -w %s %s", backend_cmd,
+					 item->req_id, item->pkgid, item->args);
+
+	argv = __generate_argv(args);
+
+	pid = __fork_and_exec_with_args(argv, item->uid);
+	g_strfreev(argv);
+	free(backend_cmd);
+
+	return pid;
+}
+
 static int __process_reinstall(pm_dbus_msg *item)
 {
 	char *backend_cmd;
@@ -1360,6 +1383,11 @@ gboolean queue_job(void *data)
 		__set_backend_busy(x);
 		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_install(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_MOUNT_INSTALL:
+		__set_backend_busy(x);
+		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
+		ret = __process_mount_install(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_REINSTALL:
 		__set_backend_busy(x);
