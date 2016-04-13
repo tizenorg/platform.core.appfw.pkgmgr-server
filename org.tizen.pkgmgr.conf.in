@@ -9,6 +9,7 @@
 	<policy context="default">
                 <allow send_destination="org.tizen.pkgmgr"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="install" privilege="http://tizen.org/privilege/packagemanager.admin"/>
+		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="mount_install" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="reinstall" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="uninstall" privilege="http://tizen.org/privilege/packagemanager.admin"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="move" privilege="http://tizen.org/privilege/packagemanager.admin"/>
