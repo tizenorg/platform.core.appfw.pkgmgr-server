@@ -244,6 +244,12 @@ catch:
 	return ret;
 }
 
+static int __handle_request_mount_install(uid_t uid,
+	GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	return __handle_request_install(uid, invocation, parameters);
+}
+
 static int __handle_request_reinstall(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
@@ -961,6 +967,8 @@ static void __handle_method_call(GDBusConnection *connection,
 
 	if (g_strcmp0(method_name, "install") == 0)
 		ret = __handle_request_install(uid, invocation, parameters);
+	if (g_strcmp0(method_name, "mount_install") == 0)
+		ret = __handle_request_mount_install(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "reinstall") == 0)
 		ret = __handle_request_reinstall(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "uninstall") == 0)
