@@ -28,6 +28,14 @@ static const char instropection_xml[] =
 	"      <arg type='i' name='ret' direction='out'/>"
 	"      <arg type='s' name='reqkey' direction='out'/>"
 	"    </method>"
+	"    <method name='mount_install'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgtype' direction='in'/>"
+	"      <arg type='s' name='pkgpath' direction='in'/>"
+	"      <arg type='as' name='args' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"      <arg type='s' name='reqkey' direction='out'/>"
+	"    </method>"
 	"    <method name='uninstall'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='pkgtype' direction='in'/>"
@@ -235,6 +243,87 @@ static int __handle_request_install(uid_t uid,
 	ret = 0;
 
 catch:
+	if (reqkey)
+		free(reqkey);
+
+	if (args)
+		free(args);
+
+	return ret;
+}
+
+static int __handle_request_mount_install(uid_t uid,
+	GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *pkgtype = NULL;
+	char *pkgpath = NULL;
+	char *args = NULL;
+	char *reqkey = NULL;
+	gchar **tmp_args = NULL;
+	gsize args_count;
+	int ret = -1;
+	GVariant *value;
+	int i = 0;
+	int len = 0;
+
+	g_variant_get(parameters, "(u&s&s@as)", &target_uid, &pkgtype, &pkgpath, &value);
+	tmp_args = (gchar **)g_variant_get_strv(value, &args_count);
+
+	for (i = 0; i < args_count; i++)
+		len = len + strlen(tmp_args[i]) + 1;
+
+	args = (char *)calloc(len, sizeof(char));
+	if (args == NULL) {
+		ERR("calloc failed");
+		ret =  -1;
+		goto catch;
+	}
+
+	for (i = 0; i < args_count; i++) {
+		strncat(args, tmp_args[i], strlen(tmp_args[i]));
+		if (i != args_count - 1)
+			strncat(args, " ", strlen(" "));
+	}
+
+	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+		                                      g_variant_new("(is)",
+		                                                    PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	if (pkgpath == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+		                                      g_variant_new("(is)",
+		                                                    PKGMGR_R_ECOMM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	reqkey = __generate_reqkey(pkgpath);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_MOUNT_INSTALL,
+                       pkgtype, pkgpath, args)) {
+	g_dbus_method_invocation_return_value(invocation,
+	                                      g_variant_new("(is)",
+	                                                    PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+	                                      g_variant_new("(is)",
+	                                                    PKGMGR_R_OK,
+	                                                    reqkey));
+	ret = 0;
+
+  catch:
 	if (reqkey)
 		free(reqkey);
 
@@ -961,6 +1050,8 @@ static void __handle_method_call(GDBusConnection *connection,
 
 	if (g_strcmp0(method_name, "install") == 0)
 		ret = __handle_request_install(uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "mount_install") == 0)
+		ret = __handle_request_mount_install(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "reinstall") == 0)
 		ret = __handle_request_reinstall(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "uninstall") == 0)
