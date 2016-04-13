@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="0.1574480047">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="0.1574480047" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" description="" id="0.1574480047" name="Default" parent="org.eclipse.cdt.build.core.prefbase.cfg">
+					<folderInfo id="0.1574480047." name="/" resourcePath="">
+						<toolChain id="org.eclipse.cdt.build.core.prefbase.toolchain.1675373397" name="No ToolChain" resourceTypeBasedDiscovery="false" superClass="org.eclipse.cdt.build.core.prefbase.toolchain">
+							<targetPlatform id="org.eclipse.cdt.build.core.prefbase.toolchain.1675373397.521335569" name=""/>
+							<builder id="org.eclipse.cdt.build.core.settings.default.builder.2110763002" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<tool id="org.eclipse.cdt.build.core.settings.holder.libs.892135537" name="holder for library settings" superClass="org.eclipse.cdt.build.core.settings.holder.libs"/>
+							<tool id="org.eclipse.cdt.build.core.settings.holder.328941891" name="Assembly" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.75020147" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/cert-svc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/pkgmgr}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/minizip}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.892220726" languageId="org.eclipse.cdt.core.assembly" languageName="Assembly" sourceContentType="org.eclipse.cdt.core.asmSource" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool id="org.eclipse.cdt.build.core.settings.holder.1400648521" name="GNU C++" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1599979887" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/cert-svc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/pkgmgr}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/minizip}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.1047245434" languageId="org.eclipse.cdt.core.g++" languageName="GNU C++" sourceContentType="org.eclipse.cdt.core.cxxSource,org.eclipse.cdt.core.cxxHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+							<tool id="org.eclipse.cdt.build.core.settings.holder.979064268" name="GNU C" superClass="org.eclipse.cdt.build.core.settings.holder">
+								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.321100165" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/cert-svc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/pkgmgr}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/minizip}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include}&quot;"/>
+								</option>
+								<inputType id="org.eclipse.cdt.build.core.settings.holder.inType.593634663" languageId="org.eclipse.cdt.core.gcc" languageName="GNU C" sourceContentType="org.eclipse.cdt.core.cSource,org.eclipse.cdt.core.cHeader" superClass="org.eclipse.cdt.build.core.settings.holder.inType"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+				<externalSettings containerId="app-installers;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier">
+					<externalSetting>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/cert-svc"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/pkgmgr"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/boost"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include/minizip"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/manifest-parser-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="includePath" name="/home/a.szulakiewi/devel/app-installers-build/local/BUILD-ROOTS/scratch.armv7l.0/usr/include"/>
+					</externalSetting>
+				</externalSettings>
+				<externalSettings containerId="crosswalk-tizen;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+				<externalSettings containerId="manifest-parser;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+				<externalSettings containerId="pkgmgr-info;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+				<externalSettings containerId="pkgmgr-tool;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+				<externalSettings containerId="tpk-backend;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier">
+					<externalSetting/>
+				</externalSettings>
+				<externalSettings containerId="webapi-plugins;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+				<externalSettings containerId="wgt-backend;" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier"/>
+			</storageModule>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="pkgmgr-server.null.255955617" name="pkgmgr-server"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="0.1574480047">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope"/>
+</cproject>
