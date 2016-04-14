@@ -923,6 +923,162 @@ static int __handle_request_check_blacklist(uid_t uid,
 	return 0;
 }
 
+static int __handle_request_disable_app_splash_screen(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1; /* 0xFFFFFFF? */
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = PKGMGR_R_OK;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN,
+				"default", appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", ret, reqkey));
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
+static int __handle_request_enable_app_splash_screen(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1; /* 0xFFFFFFF? */
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = PKGMGR_R_OK;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN,
+				"default", appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", ret, reqkey));
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
+static int __handle_request_disable_global_app_splash_screen_for_uid(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1; /* 0xFFFFFFF? */
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = PKGMGR_R_OK;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_SPLASH_SCREEN_FOR_UID,
+				"default", appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", ret, reqkey));
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
+static int __handle_request_enable_global_app_splash_screen_for_uid(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1; /* 0xFFFFFFF? */
+	char *appid = NULL;
+	char *reqkey = NULL;
+	int ret = PKGMGR_R_OK;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ret = -1;
+		goto catch;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_SPLASH_SCREEN_FOR_UID,
+				"default", appid, "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
+		ret = -1;
+		goto catch;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(is)", ret, reqkey));
+
+catch:
+	if (reqkey)
+		free(reqkey);
+
+	return ret;
+}
+
 static uid_t __get_caller_uid(GDBusConnection *connection, const char *name)
 {
 	GError *err = NULL;
@@ -1007,6 +1163,18 @@ static void __handle_method_call(GDBusConnection *connection,
 	else if (g_strcmp0(method_name, "check_blacklist") == 0)
 		ret = __handle_request_check_blacklist(uid, invocation,
 				parameters);
+	else if (g_strcmp0(method_name, "disable_app_splash_screen") == 0)
+		ret = __handle_request_disable_app_splash_screen(uid,
+				invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_app_splash_screen") == 0)
+		ret = __handle_request_enable_app_splash_screen(uid,
+				invocation, parameters);
+	else if (g_strcmp0(method_name, "disable_global_app_splash_screen_for_uid") == 0)
+		ret = __handle_request_disable_global_app_splash_screen_for_uid(
+				uid, invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_global_app_splash_screen_for_uid") == 0)
+		ret = __handle_request_enable_global_app_splash_screen_for_uid(
+				uid, invocation, parameters);
 	else
 		ret = -1;
 
