@@ -22,6 +22,7 @@ BuildRequires:  pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr)
+BuildRequires:  pkgconfig(pkgmgr-installer)
 BuildRequires:  pkgconfig(drm-service-core-tizen)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgmgr-info-parser-devel

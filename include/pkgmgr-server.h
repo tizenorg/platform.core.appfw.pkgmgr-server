@@ -25,12 +25,24 @@
 
 #include <sys/types.h>
 #include <glib.h>
+#include <dlog.h>
 
 #ifdef LOG_TAG
 #undef LOG_TAG
 #endif /* LOG_TAG */
 #define LOG_TAG "PKGMGR_SERVER"
-#include "package-manager-debug.h"
+
+#ifndef ERR
+#define ERR(fmt, args...) LOGE("[%s:%d] "fmt"\n", __func__, __LINE__, ##args)
+#endif
+
+#ifndef DBG
+#define DBG(fmt, args...) LOGD("[%s:%d] "fmt"\n", __func__, __LINE__, ##args)
+#endif
+
+#ifndef INFO
+#define INFO(fmt, args...) LOGI("[%s:%d] "fmt"\n", __func__, __LINE__, ##args)
+#endif
 
 #define CONF_FILE "/etc/package-manager/server/.config"
 #define DESKTOP_FILE_DIRS "/usr/share/install-info/desktop.conf"

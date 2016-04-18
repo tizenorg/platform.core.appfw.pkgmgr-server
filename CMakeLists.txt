@@ -30,7 +30,8 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		libtzplatform-config
 		drm-service-core-tizen
 		sqlite3
-		pkgmgr)
+		pkgmgr
+		pkgmgr-installer)
 FOREACH(SERVER_FLAGS ${SERVER_DEPS_CFLAGS})
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SERVER_FLAGS}")
 ENDFOREACH(SERVER_FLAGS)

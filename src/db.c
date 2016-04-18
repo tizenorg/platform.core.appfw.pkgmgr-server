@@ -22,7 +22,6 @@
 #include <sqlite3.h>
 
 #include <package-manager.h>
-#include <package-manager-debug.h>
 
 #include "pkgmgr-server.h"
 

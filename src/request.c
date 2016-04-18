@@ -1,14 +1,16 @@
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/time.h>
 
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "comm_config.h"
 #include "pm-queue.h"
 #include "pkgmgr-server.h"
 #include "package-manager.h"
-#include "package-manager-debug.h"
+
+#define PKGMGR_DBUS_SERVICE "org.tizen.pkgmgr"
+#define PKGMGR_DBUS_OBJECT_PATH "/org/tizen/pkgmgr"
 
 static const char instropection_xml[] =
 	"<node>"
@@ -1046,7 +1048,7 @@ static void __on_bus_acquired(GDBusConnection *connection, const gchar *name,
 	DBG("on bus acquired");
 
 	reg_id = g_dbus_connection_register_object(connection,
-			COMM_PKGMGR_DBUS_OBJECT_PATH,
+			PKGMGR_DBUS_OBJECT_PATH,
 			instropection_data->interfaces[0],
 			&interface_vtable, NULL, NULL, &err);
 
@@ -1072,7 +1074,7 @@ int __init_request_handler(void)
 {
 	instropection_data = g_dbus_node_info_new_for_xml(instropection_xml, NULL);
 
-	owner_id = g_bus_own_name(G_BUS_TYPE_SYSTEM, COMM_PKGMGR_DBUS_SERVICE,
+	owner_id = g_bus_own_name(G_BUS_TYPE_SYSTEM, PKGMGR_DBUS_SERVICE,
 			G_BUS_NAME_OWNER_FLAGS_NONE, __on_bus_acquired,
 			__on_name_acquired, __on_name_lost, NULL, NULL);
 

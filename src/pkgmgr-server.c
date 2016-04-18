@@ -45,7 +45,6 @@
 #include "pkgmgr_installer.h"
 #include "pkgmgr-server.h"
 #include "pm-queue.h"
-#include "comm_config.h"
 #include "package-manager.h"
 
 #define BUFMAX 128
