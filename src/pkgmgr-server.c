@@ -216,15 +216,27 @@ static void __send_app_signal(uid_t uid, const char *req_id,
 
 	if (pkgmgr_installer_set_uid(pi, uid))
 		goto catch;
-	if (req_type == PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID
-			|| req_type == PKGMGR_REQUEST_TYPE_ENABLE_APP) {
+
+	switch (req_type) {
+	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID:
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP:
 		if (pkgmgr_installer_set_request_type(pi, PKGMGR_REQ_ENABLE_APP))
 			goto catch;
-	} else if (req_type == PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID
-			|| req_type == PKGMGR_REQUEST_TYPE_DISABLE_APP) {
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID:
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP:
 		if (pkgmgr_installer_set_request_type(pi, PKGMGR_REQ_DISABLE_APP))
 			goto catch;
-	} else {
+		break;
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN:
+		if (pkgmgr_installer_set_request_type(pi, PKGMGR_REQ_ENABLE_APP_SPLASH_SCREEN))
+			goto catch;
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN:
+		if (pkgmgr_installer_set_request_type(pi, PKGMGR_REQ_DISABLE_APP_SPLASH_SCREEN))
+			goto catch;
+		break;
+	default:
 		DBG("Unsupported req_type[%d]", req_type);
 		goto catch;
 	}
@@ -769,24 +781,23 @@ static int __fork_and_exec_with_args(char **argv, uid_t uid)
 	return pid;
 }
 
-static int __change_item_info(pm_dbus_msg *item, uid_t uid)
+static int __change_item_info(pm_dbus_msg *item, uid_t uid, bool *is_global)
 {
 	int ret = 0;
 	char *pkgid = NULL;
-	bool is_global = false;
 	pkgmgrinfo_appinfo_h handle = NULL;
 
 	switch (item->req_type) {
 	case PKGMGR_REQUEST_TYPE_DISABLE_APP:
 	case PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID:
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN:
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN:
 		ret = pkgmgrinfo_appinfo_get_usr_appinfo(item->pkgid, uid, &handle);
- 		break;
-
+		break;
 	case PKGMGR_REQUEST_TYPE_ENABLE_APP:
 	case PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID:
 		ret = pkgmgrinfo_appinfo_get_usr_disabled_appinfo(item->pkgid, uid, &handle);
- 		break;
-
+		break;
 	default:
 		return PMINFO_R_ERROR;
 	}
@@ -794,18 +805,18 @@ static int __change_item_info(pm_dbus_msg *item, uid_t uid)
 	if (ret != PMINFO_R_OK)
 		return PMINFO_R_ERROR;
 
-	ret = pkgmgrinfo_appinfo_is_global(handle, &is_global);
+	ret = pkgmgrinfo_appinfo_is_global(handle, is_global);
 	if (ret != PMINFO_R_OK)
 		goto catch;
 
 	if ((item->req_type == PKGMGR_REQUEST_TYPE_DISABLE_APP
 			|| item->req_type == PKGMGR_REQUEST_TYPE_ENABLE_APP)
-			&& is_global) {
+			&& *is_global) {
 			ret = PMINFO_R_ERROR;
 			goto catch;
 	} else if ((item->req_type == PKGMGR_REQUEST_TYPE_DISABLE_GLOBAL_APP_FOR_UID
 			|| item->req_type == PKGMGR_REQUEST_TYPE_ENABLE_GLOBAL_APP_FOR_UID)
-			&& !is_global) {
+			&& !*is_global) {
 			ret = PMINFO_R_ERROR;
 			goto catch;
 	}
@@ -815,7 +826,7 @@ static int __change_item_info(pm_dbus_msg *item, uid_t uid)
 		goto catch;
 
 	strncpy(item->appid, item->pkgid, sizeof(item->pkgid) - 1);
-	memset((item->pkgid),0,MAX_PKG_NAME_LEN);
+	memset((item->pkgid), 0, MAX_PKG_NAME_LEN);
 	strncpy(item->pkgid, pkgid, sizeof(item->pkgid) - 1);
 
 catch:
@@ -931,13 +942,14 @@ static int __process_disable_pkg(pm_dbus_msg *item)
 static int __process_enable_app(pm_dbus_msg *item)
 {
 	int ret = -1;
+	bool is_global = false;
 
 	__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 			PKGMGR_INSTALLER_START_KEY_STR,
 			PKGMGR_INSTALLER_APP_ENABLE_EVENT_STR, item->req_type);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	ret = __change_item_info(item, item->uid);
+	ret = __change_item_info(item, item->uid, &is_global);
 	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR,
@@ -962,13 +974,14 @@ static int __process_enable_app(pm_dbus_msg *item)
 static int __process_disable_app(pm_dbus_msg *item)
 {
 	int ret = -1;
+	bool is_global = false;
 
 	__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 			PKGMGR_INSTALLER_START_KEY_STR,
 			PKGMGR_INSTALLER_APP_DISABLE_EVENT_STR, item->req_type);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	ret = __change_item_info(item, item->uid);
+	ret = __change_item_info(item, item->uid, &is_global);
 	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR,
@@ -999,13 +1012,14 @@ static int __process_disable_app(pm_dbus_msg *item)
 static int __process_enable_global_app_for_uid(pm_dbus_msg *item)
 {
 	int ret = -1;
+	bool is_global = true;
 
 	__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 			PKGMGR_INSTALLER_START_KEY_STR,
 			PKGMGR_INSTALLER_GLOBAL_APP_ENABLE_FOR_UID, item->req_type);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	ret = __change_item_info(item, item->uid);
+	ret = __change_item_info(item, item->uid, &is_global);
 	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR,
@@ -1029,6 +1043,7 @@ static int __process_enable_global_app_for_uid(pm_dbus_msg *item)
 static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
 {
 	int ret = -1;
+	bool is_global = true;
 
 	__send_app_signal(item->uid, item->req_id,
 			item->pkgid, item->pkgid,
@@ -1036,7 +1051,7 @@ static int __process_disable_global_app_for_uid(pm_dbus_msg *item)
 			PKGMGR_INSTALLER_GLOBAL_APP_DISABLE_FOR_UID, item->req_type);
 
 	/* get actual pkgid and replace it to appid which is currently stored at pkgid variable */
-	ret = __change_item_info(item, GLOBAL_USER);
+	ret = __change_item_info(item, GLOBAL_USER, &is_global);
 	if (ret != PMINFO_R_OK || strlen(item->appid) == 0) {
 		__send_app_signal(item->uid, item->req_id, item->pkgid, item->pkgid,
 				PKGMGR_INSTALLER_END_KEY_STR, PKGMGR_INSTALLER_FAIL_EVENT_STR,
@@ -1275,6 +1290,74 @@ static int __process_check_blacklist(pm_dbus_msg *item)
 	return ret;
 }
 
+static int __process_enable_app_splash_screen(pm_dbus_msg *item)
+{
+	int ret;
+	bool is_global = false;
+
+	ret = __change_item_info(item, item->uid, &is_global);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0)
+		return -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkgid, item->appid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_APP_ENABLE_SPLASH_SCREEN_EVENT_STR,
+			item->req_type);
+
+	if (is_global)
+		ret = pkgmgr_parser_update_global_app_splash_screen_display_info_in_usr_db(
+				item->appid, item->uid, 0);
+	else
+		ret = pkgmgr_parser_update_app_splash_screen_display_info_in_usr_db(
+			item->appid, item->uid, 0);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkgid,
+				item->appid, PKGMGR_INSTALLER_END_KEY_STR,
+				PKGMGR_INSTALLER_FAIL_EVENT_STR,
+				item->req_type);
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkgid,
+				item->appid, PKGMGR_INSTALLER_END_KEY_STR,
+				PKGMGR_INSTALLER_OK_EVENT_STR,
+				item->req_type);
+
+	return ret;
+}
+
+static int __process_disable_app_splash_screen(pm_dbus_msg *item)
+{
+	int ret;
+	bool is_global = false;
+
+	ret = __change_item_info(item, item->uid, &is_global);
+	if (ret != PMINFO_R_OK || strlen(item->appid) == 0)
+		return -1;
+
+	__send_app_signal(item->uid, item->req_id, item->pkgid, item->appid,
+			PKGMGR_INSTALLER_START_KEY_STR,
+			PKGMGR_INSTALLER_APP_DISABLE_SPLASH_SCREEN_EVENT_STR,
+			item->req_type);
+
+	if (is_global)
+		ret = pkgmgr_parser_update_global_app_splash_screen_display_info_in_usr_db(
+				item->appid, item->uid, 1);
+	else
+		ret = pkgmgr_parser_update_app_splash_screen_display_info_in_usr_db(
+				item->appid, item->uid, 1);
+	if (ret != PMINFO_R_OK)
+		__send_app_signal(item->uid, item->req_id, item->pkgid,
+				item->appid, PKGMGR_INSTALLER_END_KEY_STR,
+				PKGMGR_INSTALLER_FAIL_EVENT_STR,
+				item->req_type);
+	else
+		__send_app_signal(item->uid, item->req_id, item->pkgid,
+				item->appid, PKGMGR_INSTALLER_END_KEY_STR,
+				PKGMGR_INSTALLER_OK_EVENT_STR,
+				item->req_type);
+
+	return ret;
+}
+
 gboolean queue_job(void *data)
 {
 	pm_dbus_msg *item = NULL;
@@ -1379,6 +1462,12 @@ gboolean queue_job(void *data)
 		break;
 	case PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST:
 		ret = __process_check_blacklist(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN:
+		ret = __process_enable_app_splash_screen(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN:
+		ret = __process_disable_app_splash_screen(item);
 		break;
 	default:
 		ret = -1;
