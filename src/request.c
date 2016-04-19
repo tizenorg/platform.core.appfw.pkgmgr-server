@@ -139,6 +139,16 @@ static const char instropection_xml[] =
 	"      <arg type='i' name='result' direction='out'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
+	"    <method name='enable_app_splash_screen'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='appid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='disable_app_splash_screen'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='appid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"</node>";
 static GDBusNodeInfo *instropection_data;
@@ -929,6 +939,61 @@ static int __handle_request_check_blacklist(uid_t uid,
 	return 0;
 }
 
+
+static int __update_app_splash_screen(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters,
+		int req_type)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *appid = NULL;
+	char *reqkey;
+
+	g_variant_get(parameters, "(u&s)", &target_uid, &appid);
+	if (target_uid == (uid_t)-1 || appid == NULL) {
+		ERR("target_uid: %d, appid: %s", target_uid, appid);
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey(appid);
+	if (reqkey == NULL) {
+		ERR("Failed to generate request key");
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey, req_type, "default",
+				appid, "")) {
+		ERR("Failed to push request");
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	g_dbus_method_invocation_return_value(invocation,
+			g_variant_new("(i)", PKGMGR_R_OK));
+
+	if (reqkey)
+		free(reqkey);
+
+	return 0;
+}
+
+static int __handle_request_enable_app_splash_screen(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	return __update_app_splash_screen(uid, invocation, parameters,
+			PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN);
+}
+
+static int __handle_request_disable_app_splash_screen(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	return __update_app_splash_screen(uid, invocation, parameters,
+			PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN);
+}
+
 static uid_t __get_caller_uid(GDBusConnection *connection, const char *name)
 {
 	GError *err = NULL;
@@ -1013,6 +1078,12 @@ static void __handle_method_call(GDBusConnection *connection,
 	else if (g_strcmp0(method_name, "check_blacklist") == 0)
 		ret = __handle_request_check_blacklist(uid, invocation,
 				parameters);
+	else if (g_strcmp0(method_name, "disable_app_splash_screen") == 0)
+		ret = __handle_request_disable_app_splash_screen(uid,
+				invocation, parameters);
+	else if (g_strcmp0(method_name, "enable_app_splash_screen") == 0)
+		ret = __handle_request_enable_app_splash_screen(uid,
+				invocation, parameters);
 	else
 		ret = -1;
 
