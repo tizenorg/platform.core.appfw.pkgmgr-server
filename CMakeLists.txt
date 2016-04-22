@@ -20,7 +20,13 @@ INCLUDE_DIRECTORIES(include)
 INCLUDE(FindPkgConfig)
 
 SET(PKGMGR_SERVER "pkgmgr-server")
-SET(SRCS src/pkgmgr-server.c src/request.c src/pm-queue.c src/db.c)
+SET(SRCS
+	src/pkgmgr-server.c
+	src/request.c
+	src/pm-queue.c
+	src/db.c
+	src/restriction_mode.c
+	)
 
 pkg_check_modules(SERVER_DEPS REQUIRED
 		gio-2.0
