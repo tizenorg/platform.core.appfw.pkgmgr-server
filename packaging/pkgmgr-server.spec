@@ -37,6 +37,7 @@ Packager Manager server package for packaging
 cp %{SOURCE1001} .
 
 %define db_dir %{_localstatedir}/lib/package-manager
+%define run_dir /run/user
 %define backend_dir %{_sysconfdir}/package-manager/backend
 
 %build
