@@ -139,6 +139,19 @@ static const char instropection_xml[] =
 	"      <arg type='i' name='result' direction='out'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
+	"    <method name='set_restriction_mode'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='unset_restriction_mode'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
+	"    <method name='check_restriction_mode'>"
+	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='i' name='result' direction='out'/>"
+	"      <arg type='i' name='ret' direction='out'/>"
+	"    </method>"
 	"  </interface>"
 	"</node>";
 static GDBusNodeInfo *instropection_data;
@@ -929,6 +942,114 @@ static int __handle_request_check_blacklist(uid_t uid,
 	return 0;
 }
 
+static int __handle_request_set_restriction_mode(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *reqkey;
+
+	g_variant_get(parameters, "(u)", &target_uid);
+	if (target_uid == (uid_t)-1) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("restriction");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ENOMEM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey,
+				PKGMGR_REQUEST_TYPE_SET_RESTRICTION_MODE,
+				"default", "", "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
+static int __handle_request_unset_restriction_mode(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *reqkey;
+
+	g_variant_get(parameters, "(u)", &target_uid);
+	if (target_uid == (uid_t)-1) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("restriction");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ENOMEM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey,
+				PKGMGR_REQUEST_TYPE_UNSET_RESTRICTION_MODE,
+				"default", "", "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
+static int __handle_request_check_restriction_mode(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	uid_t target_uid = (uid_t)-1;
+	char *reqkey;
+
+	g_variant_get(parameters, "(u)", &target_uid);
+	if (target_uid == (uid_t)-1) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(i)", PKGMGR_R_ECOMM));
+		return -1;
+	}
+
+	reqkey = __generate_reqkey("restriction");
+	if (reqkey == NULL) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(ii)", -1, PKGMGR_R_ENOMEM));
+		return -1;
+	}
+
+	if (_pm_queue_push(target_uid, reqkey,
+				PKGMGR_REQUEST_TYPE_CHECK_RESTRICTION_MODE,
+				"default", "", "")) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(ii)", -1, PKGMGR_R_ESYSTEM));
+		free(reqkey);
+		return -1;
+	}
+
+	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
+				(gpointer)invocation))
+		ERR("reqkey already exists");
+
+	return 0;
+}
+
 static uid_t __get_caller_uid(GDBusConnection *connection, const char *name)
 {
 	GError *err = NULL;
@@ -1012,6 +1133,15 @@ static void __handle_method_call(GDBusConnection *connection,
 				parameters);
 	else if (g_strcmp0(method_name, "check_blacklist") == 0)
 		ret = __handle_request_check_blacklist(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "set_restriction_mode") == 0)
+		ret = __handle_request_set_restriction_mode(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "unset_restriction_mode") == 0)
+		ret = __handle_request_unset_restriction_mode(uid, invocation,
+				parameters);
+	else if (g_strcmp0(method_name, "check_restriction_mode") == 0)
+		ret = __handle_request_check_restriction_mode(uid, invocation,
 				parameters);
 	else
 		ret = -1;
