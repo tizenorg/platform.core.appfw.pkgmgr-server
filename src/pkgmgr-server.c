@@ -1348,6 +1348,47 @@ static int __process_update_app_splash_screen(pm_dbus_msg *item, int flag)
 	return ret;
 }
 
+static int __process_set_restriction_mode(pm_dbus_msg *item)
+{
+	int ret;
+	int mode;
+
+	mode = atoi(item->args);
+	ret = __set_restriction_mode(item->uid, mode);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", ret));
+
+	return ret;
+}
+
+static int __process_unset_restriction_mode(pm_dbus_msg *item)
+{
+	int ret;
+	int mode;
+
+	mode = atoi(item->args);
+	ret = __unset_restriction_mode(item->uid, mode);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(i)", ret));
+
+	return ret;
+}
+
+static int __process_get_restriction_mode(pm_dbus_msg *item)
+{
+	int ret;
+	int result = -1;
+
+	ret = __get_restriction_mode(item->uid, &result);
+
+	__return_value_to_caller(item->req_id,
+			g_variant_new("(ii)", result, ret));
+
+	return ret;
+}
+
 gboolean queue_job(void *data)
 {
 	pm_dbus_msg *item = NULL;
@@ -1463,6 +1504,15 @@ gboolean queue_job(void *data)
 		break;
 	case PKGMGR_REQUEST_TYPE_DISABLE_APP_SPLASH_SCREEN:
 		ret = __process_update_app_splash_screen(item, 0);
+		break;
+	case PKGMGR_REQUEST_TYPE_SET_RESTRICTION_MODE:
+		ret = __process_set_restriction_mode(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_UNSET_RESTRICTION_MODE:
+		ret = __process_unset_restriction_mode(item);
+		break;
+	case PKGMGR_REQUEST_TYPE_GET_RESTRICTION_MODE:
+		ret = __process_get_restriction_mode(item);
 		break;
 	default:
 		ret = -1;
