@@ -78,6 +78,9 @@ enum request_type {
 	PKGMGR_REQUEST_TYPE_ADD_BLACKLIST,
 	PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST,
 	PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
+	PKGMGR_REQUEST_TYPE_SET_RESTRICTION_MODE,
+	PKGMGR_REQUEST_TYPE_UNSET_RESTRICTION_MODE,
+	PKGMGR_REQUEST_TYPE_CHECK_RESTRICTION_MODE,
 };
 
 typedef struct {
@@ -107,5 +110,8 @@ void __fini_request_handler(void);
 int __add_blacklist(uid_t uid, const char *pkgid);
 int __remove_blacklist(uid_t uid, const char *pkgid);
 int __check_blacklist(uid_t uid, const char *pkgid, int *result);
+int __set_restriction_mode(uid_t uid, int mode);
+int __unset_restriction_mode(uid_t uid, int mode);
+int __get_restriction_mode(uid_t uid, int *result);
 
 #endif/*  _PKGMGR_SERVER_H_ */
