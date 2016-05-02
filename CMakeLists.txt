@@ -30,6 +30,7 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		libtzplatform-config
 		drm-service-core-tizen
 		sqlite3
+		libgum
 		pkgmgr
 		pkgmgr-installer)
 FOREACH(SERVER_FLAGS ${SERVER_DEPS_CFLAGS})
