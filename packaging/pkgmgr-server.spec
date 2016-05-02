@@ -25,6 +25,7 @@ BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  pkgconfig(pkgmgr-installer)
 BuildRequires:  pkgconfig(drm-service-core-tizen)
 BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(libgum)
 BuildRequires:  pkgmgr-info-parser-devel
 BuildRequires:  pkgmgr-info-parser
 BuildRequires:  fdupes

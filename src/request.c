@@ -4,6 +4,8 @@
 
 #include <glib.h>
 #include <gio/gio.h>
+#include <gum/gum-user.h>
+#include <gum/common/gum-user-types.h>
 
 #include "pm-queue.h"
 #include "pkgmgr-server.h"
@@ -177,6 +179,69 @@ static char *__generate_reqkey(const char *pkgid)
 	snprintf(str_req_key, size, "%s_%s", pkgid, timestr);
 
 	return str_req_key;
+}
+
+static int __is_admin_user(uid_t uid)
+{
+	GumUser *guser;
+	GumUserType ut = GUM_USERTYPE_NONE;
+
+	guser = gum_user_get_sync(uid, FALSE);
+	if (guser == NULL) {
+		ERR("cannot get user information from gumd");
+		return -1;
+	}
+
+	g_object_get(G_OBJECT(guser), "usertype", &ut, NULL);
+	if (ut == GUM_USERTYPE_NONE) {
+		ERR("cannot get user type");
+		g_object_unref(guser);
+		return -1;
+	} else if (ut != GUM_USERTYPE_ADMIN) {
+		g_object_unref(guser);
+		return 0;
+	}
+
+	g_object_unref(guser);
+
+	return 1;
+}
+
+static int __check_caller_permission(uid_t uid,
+		GDBusMethodInvocation *invocation, GVariant *parameters)
+{
+	GVariant *v;
+	uid_t target_uid;
+	int is_admin;
+
+	v = g_variant_get_child_value(parameters, 0);
+	if (v == NULL) {
+		g_dbus_method_invocation_return_error_literal(invocation,
+				G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+				"Internal error.");
+		return -1;
+	}
+
+	target_uid = g_variant_get_uint32(v);
+	g_variant_unref(v);
+	if (uid == target_uid)
+		return 0;
+
+	is_admin = __is_admin_user(uid);
+	if (is_admin == -1) {
+		g_dbus_method_invocation_return_error_literal(invocation,
+				G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+				"Internal error.");
+		return -1;
+	} else if (is_admin == 0) {
+		g_dbus_method_invocation_return_error_literal(invocation,
+				G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED,
+				"Non-admin user cannot request operation to "
+				"other users.");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int __handle_request_install(uid_t uid,
@@ -1028,6 +1093,9 @@ static void __handle_method_call(GDBusConnection *connection,
 	uid = __get_caller_uid(connection,
 		g_dbus_method_invocation_get_sender(invocation));
 	if (uid == (uid_t)-1)
+		return;
+
+	if (__check_caller_permission(uid, invocation, parameters))
 		return;
 
 	if (g_strcmp0(method_name, "install") == 0)
