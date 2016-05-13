@@ -24,8 +24,8 @@ BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  pkgconfig(pkgmgr-installer)
 BuildRequires:  pkgconfig(drm-service-core-tizen)
-BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(libgum)
+BuildRequires:  gdbm-devel
 BuildRequires:  pkgmgr-info-parser-devel
 BuildRequires:  pkgmgr-info-parser
 BuildRequires:  fdupes
@@ -37,14 +37,11 @@ Packager Manager server package for packaging
 %setup -q
 cp %{SOURCE1001} .
 
-%define db_dir %{_localstatedir}/lib/package-manager
 %define run_dir /run/user
 %define backend_dir %{_sysconfdir}/package-manager/backend
 
 %build
-sqlite3 blacklist.db < ./blacklist.sql
-
-%cmake . -DDB_DIR=%{db_dir} -DBACKEND_DIR=%{backend_dir}
+%cmake . -DRUN_DIR=%{run_dir} -DBACKEND_DIR=%{backend_dir}
 
 %__make %{?_smp_mflags}
 
@@ -54,9 +51,6 @@ sqlite3 blacklist.db < ./blacklist.sql
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
-
-mkdir -p %{buildroot}%{db_dir}
-install -m 0600 blacklist.db %{buildroot}%{db_dir}
 
 %fdupes %{buildroot}
 
@@ -70,6 +64,5 @@ install -m 0600 blacklist.db %{buildroot}%{db_dir}
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server
-%config(noreplace) %{db_dir}/blacklist.db
 %exclude %{_sysconfdir}/package-manager/server/queue_status
 /usr/share/license/%{name}
