@@ -133,22 +133,6 @@ static const char instropection_xml[] =
 	"      <arg type='s' name='decrypted_file_path' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
-	"    <method name='add_blacklist'>"
-	"      <arg type='u' name='uid' direction='in'/>"
-	"      <arg type='s' name='pkgid' direction='in'/>"
-	"      <arg type='i' name='ret' direction='out'/>"
-	"    </method>"
-	"    <method name='remove_blacklist'>"
-	"      <arg type='u' name='uid' direction='in'/>"
-	"      <arg type='s' name='pkgid' direction='in'/>"
-	"      <arg type='i' name='ret' direction='out'/>"
-	"    </method>"
-	"    <method name='check_blacklist'>"
-	"      <arg type='u' name='uid' direction='in'/>"
-	"      <arg type='s' name='pkgid' direction='in'/>"
-	"      <arg type='i' name='result' direction='out'/>"
-	"      <arg type='i' name='ret' direction='out'/>"
-	"    </method>"
 	"    <method name='enable_app_splash_screen'>"
 	"      <arg type='u' name='uid' direction='in'/>"
 	"      <arg type='s' name='appid' direction='in'/>"
@@ -161,16 +145,19 @@ static const char instropection_xml[] =
 	"    </method>"
 	"    <method name='set_restriction_mode'>"
 	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='mode' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
 	"    <method name='unset_restriction_mode'>"
 	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='mode' direction='in'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
 	"    <method name='get_restriction_mode'>"
 	"      <arg type='u' name='uid' direction='in'/>"
+	"      <arg type='s' name='pkgid' direction='in'/>"
 	"      <arg type='i' name='result' direction='out'/>"
 	"      <arg type='i' name='ret' direction='out'/>"
 	"    </method>"
@@ -997,117 +984,6 @@ static int __handle_request_decrypt_package(uid_t uid,
 	return 0;
 }
 
-static int __handle_request_add_blacklist(uid_t uid,
-		GDBusMethodInvocation *invocation, GVariant *parameters)
-{
-	uid_t target_uid = (uid_t)-1;
-	char *reqkey;
-	char *pkgid = NULL;
-
-	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
-	if (target_uid == (uid_t)-1 || pkgid == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
-		return -1;
-	}
-
-	reqkey = __generate_reqkey("blacklist");
-	if (reqkey == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ENOMEM));
-		return -1;
-	}
-
-	if (_pm_queue_push(target_uid, reqkey,
-				PKGMGR_REQUEST_TYPE_ADD_BLACKLIST,
-				"default",  pkgid, "")) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		free(reqkey);
-		return -1;
-	}
-
-	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
-				(gpointer)invocation))
-		ERR("reqkey already exists");
-
-	return 0;
-}
-
-static int __handle_request_remove_blacklist(uid_t uid,
-		GDBusMethodInvocation *invocation, GVariant *parameters)
-{
-	uid_t target_uid = (uid_t)-1;
-	char *reqkey;
-	char *pkgid = NULL;
-
-	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
-	if (target_uid == (uid_t)-1 || pkgid == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ECOMM));
-		return -1;
-	}
-
-	reqkey = __generate_reqkey("blacklist");
-	if (reqkey == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ENOMEM));
-		return -1;
-	}
-
-	if (_pm_queue_push(target_uid, reqkey,
-				PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST,
-				"default", pkgid, "")) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
-		free(reqkey);
-		return -1;
-	}
-
-	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
-				(gpointer)invocation))
-		ERR("reqkey already exists");
-
-	return 0;
-}
-
-static int __handle_request_check_blacklist(uid_t uid,
-		GDBusMethodInvocation *invocation, GVariant *parameters)
-{
-	uid_t target_uid = (uid_t)-1;
-	char *reqkey;
-	char *pkgid = NULL;
-
-	g_variant_get(parameters, "(u&s)", &target_uid, &pkgid);
-	if (target_uid == (uid_t)-1 || pkgid == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(ii)", PKGMGR_R_ECOMM, -1));
-		return -1;
-	}
-
-	reqkey = __generate_reqkey("blacklist");
-	if (reqkey == NULL) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(ii)", PKGMGR_R_ENOMEM, -1));
-		return -1;
-	}
-
-	if (_pm_queue_push(target_uid, reqkey,
-				PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST,
-				"default", pkgid, "")) {
-		g_dbus_method_invocation_return_value(invocation,
-				g_variant_new("(ii)", PKGMGR_R_ESYSTEM, -1));
-		free(reqkey);
-		return -1;
-	}
-
-	if (!g_hash_table_insert(req_table, (gpointer)reqkey,
-				(gpointer)invocation))
-		ERR("reqkey already exists");
-
-	return 0;
-}
-
 static int __update_app_splash_screen(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters,
 		int req_type)
@@ -1166,12 +1042,13 @@ static int __handle_request_set_restriction_mode(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
 	char *reqkey;
 	int mode = -1;
 	char buf[4];
 
-	g_variant_get(parameters, "(ui)", &target_uid, &mode);
-	if (target_uid == (uid_t)-1 || mode < 0) {
+	g_variant_get(parameters, "(usi)", &target_uid, &pkgid, &mode);
+	if (target_uid == (uid_t)-1 || pkgid == NULL || mode < 0) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
@@ -1187,7 +1064,7 @@ static int __handle_request_set_restriction_mode(uid_t uid,
 	snprintf(buf, sizeof(buf), "%d", mode);
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_SET_RESTRICTION_MODE,
-				"default", "", buf)) {
+				"default", pkgid, buf)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -1205,12 +1082,13 @@ static int __handle_request_unset_restriction_mode(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
 	char *reqkey;
 	int mode = -1;
 	char buf[4];
 
-	g_variant_get(parameters, "(ui)", &target_uid, &mode);
-	if (target_uid == (uid_t)-1 || mode < 0) {
+	g_variant_get(parameters, "(usi)", &target_uid, &pkgid, &mode);
+	if (target_uid == (uid_t)-1 || pkgid == NULL || mode < 0) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
@@ -1226,7 +1104,7 @@ static int __handle_request_unset_restriction_mode(uid_t uid,
 	snprintf(buf, sizeof(buf), "%d", mode);
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_UNSET_RESTRICTION_MODE,
-				"default", "", buf)) {
+				"default", pkgid, buf)) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -1244,10 +1122,11 @@ static int __handle_request_get_restriction_mode(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	uid_t target_uid = (uid_t)-1;
+	char *pkgid = NULL;
 	char *reqkey;
 
-	g_variant_get(parameters, "(u)", &target_uid);
-	if (target_uid == (uid_t)-1) {
+	g_variant_get(parameters, "(us)", &target_uid, &pkgid);
+	if (target_uid == (uid_t)-1 || pkgid == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ECOMM));
 		return -1;
@@ -1262,7 +1141,7 @@ static int __handle_request_get_restriction_mode(uid_t uid,
 
 	if (_pm_queue_push(target_uid, reqkey,
 				PKGMGR_REQUEST_TYPE_GET_RESTRICTION_MODE,
-				"default", "", "")) {
+				"default", pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(ii)", -1, PKGMGR_R_ESYSTEM));
 		free(reqkey);
@@ -1355,15 +1234,6 @@ static void __handle_method_call(GDBusConnection *connection,
 				parameters);
 	else if (g_strcmp0(method_name, "decrypt_package") == 0)
 		ret = __handle_request_decrypt_package(uid, invocation,
-				parameters);
-	else if (g_strcmp0(method_name, "add_blacklist") == 0)
-		ret = __handle_request_add_blacklist(uid, invocation,
-				parameters);
-	else if (g_strcmp0(method_name, "remove_blacklist") == 0)
-		ret = __handle_request_remove_blacklist(uid, invocation,
-				parameters);
-	else if (g_strcmp0(method_name, "check_blacklist") == 0)
-		ret = __handle_request_check_blacklist(uid, invocation,
 				parameters);
 	else if (g_strcmp0(method_name, "disable_app_splash_screen") == 0)
 		ret = __handle_request_disable_app_splash_screen(uid,

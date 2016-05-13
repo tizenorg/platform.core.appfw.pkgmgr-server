@@ -25,7 +25,6 @@ SET(SRCS
 	src/pkgmgr-server.c
 	src/request.c
 	src/pm-queue.c
-	src/db.c
 	src/restriction_mode.c
 	)
 
@@ -36,7 +35,6 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		pkgmgr-info
 		libtzplatform-config
 		drm-service-core-tizen
-		sqlite3
 		libgum
 		pkgmgr
 		pkgmgr-installer)
@@ -46,7 +44,7 @@ ENDFOREACH(SERVER_FLAGS)
 
 ADD_EXECUTABLE(${PKGMGR_SERVER} ${SRCS})
 TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} pkgmgr_installer)
-TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} ${SERVER_DEPS_LDFLAGS})
+TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} ${SERVER_DEPS_LDFLAGS} -lgdbm)
 
 CONFIGURE_FILE(org.tizen.pkgmgr.service.in org.tizen.pkgmgr.service @ONLY)
 CONFIGURE_FILE(org.tizen.pkgmgr.conf.in org.tizen.pkgmgr.conf @ONLY)
