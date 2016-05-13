@@ -1276,43 +1276,6 @@ static int __process_decrypt_package(pm_dbus_msg *item)
 	return 0;
 }
 
-static int __process_add_blacklist(pm_dbus_msg *item)
-{
-	int ret;
-
-	ret = __add_blacklist(item->uid, item->pkgid);
-
-	__return_value_to_caller(item->req_id,
-			g_variant_new("(i)", ret));
-
-	return ret;
-}
-
-static int __process_remove_blacklist(pm_dbus_msg *item)
-{
-	int ret;
-
-	ret = __remove_blacklist(item->uid, item->pkgid);
-
-	__return_value_to_caller(item->req_id,
-			g_variant_new("(i)", ret));
-
-	return ret;
-}
-
-static int __process_check_blacklist(pm_dbus_msg *item)
-{
-	int ret;
-	int result = 0;
-
-	ret = __check_blacklist(item->uid, item->pkgid, &result);
-
-	__return_value_to_caller(item->req_id,
-			g_variant_new("(ii)", result, ret));
-
-	return ret;
-}
-
 static int __process_update_app_splash_screen(pm_dbus_msg *item, int flag)
 {
 	int ret;
@@ -1354,7 +1317,7 @@ static int __process_set_restriction_mode(pm_dbus_msg *item)
 	int mode;
 
 	mode = atoi(item->args);
-	ret = __set_restriction_mode(item->uid, mode);
+	ret = __restriction_mode_set(item->uid, NULL, mode);
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", ret));
@@ -1368,7 +1331,7 @@ static int __process_unset_restriction_mode(pm_dbus_msg *item)
 	int mode;
 
 	mode = atoi(item->args);
-	ret = __unset_restriction_mode(item->uid, mode);
+	ret = __restriction_mode_unset(item->uid, NULL, mode);
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", ret));
@@ -1379,12 +1342,12 @@ static int __process_unset_restriction_mode(pm_dbus_msg *item)
 static int __process_get_restriction_mode(pm_dbus_msg *item)
 {
 	int ret;
-	int result = -1;
+	int mode = -1;
 
-	ret = __get_restriction_mode(item->uid, &result);
+	ret = __restriction_mode_get(item->uid, NULL, &mode);
 
 	__return_value_to_caller(item->req_id,
-			g_variant_new("(ii)", result, ret));
+			g_variant_new("(ii)", mode, ret));
 
 	return ret;
 }
@@ -1489,15 +1452,6 @@ gboolean queue_job(void *data)
 		break;
 	case PKGMGR_REQUEST_TYPE_DECRYPT_PACKAGE:
 		ret = __process_decrypt_package(item);
-		break;
-	case PKGMGR_REQUEST_TYPE_ADD_BLACKLIST:
-		ret = __process_add_blacklist(item);
-		break;
-	case PKGMGR_REQUEST_TYPE_REMOVE_BLACKLIST:
-		ret = __process_remove_blacklist(item);
-		break;
-	case PKGMGR_REQUEST_TYPE_CHECK_BLACKLIST:
-		ret = __process_check_blacklist(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_ENABLE_APP_SPLASH_SCREEN:
 		ret = __process_update_app_splash_screen(item, 1);

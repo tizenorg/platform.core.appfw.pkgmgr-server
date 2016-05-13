@@ -1,43 +1,26 @@
-/*
- * Copyright (c) 2016 Samsung Electronics Co., Ltd. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 #include <linux/limits.h>
+
+#include <gdbm.h>
 
 #include "pkgmgr-server.h"
 
 #ifndef RUN_DIR
 #define RUN_DIR "/run/user"
 #endif
+#define RESTRICTION_DB ".package_manager_restriction_mode"
+#define VAL_SIZE sizeof(int)
+#define ALL_PKG "ALL_PKG"
 
-#define RESTRICTION_CONF ".package_manager_restriction_mode"
-
-static char *_get_conf_file_path(uid_t uid)
+static char *__get_dbpath(uid_t uid)
 {
 	char buf[PATH_MAX];
 
-	snprintf(buf, sizeof(buf), "%s/%d/%s", RUN_DIR, uid, RESTRICTION_CONF);
+	snprintf(buf, sizeof(buf), "%s/%d/%s", RUN_DIR, uid, RESTRICTION_DB);
 
 	return strdup(buf);
 }
@@ -52,138 +35,156 @@ static int __unset_mode(int cur, int mode)
 	return cur & ~(mode);
 }
 
-int __set_restriction_mode(uid_t uid, int mode)
+static GDBM_FILE __open(const char *path)
 {
-	char *conf_path;
-	int fd;
+	GDBM_FILE db;
+
+	db = gdbm_open(path, 0, GDBM_WRCREAT, S_IRUSR | S_IWUSR, NULL);
+	if (db == NULL)
+		ERR("failed to open gdbm file(%s)", path);
+
+	return db;
+}
+
+static void __close(GDBM_FILE dbf)
+{
+	gdbm_close(dbf);
+}
+
+static int __set_value(GDBM_FILE dbf, const char *pkgid, int mode)
+{
+	datum key;
+	datum content;
+	char buf[VAL_SIZE];
+
+	key.dptr = (char *)pkgid;
+	key.dsize = strlen(pkgid) + 1;
+
+	memcpy(buf, &mode, VAL_SIZE);
+	content.dptr = buf;
+	content.dsize = VAL_SIZE;
+
+	if (gdbm_store(dbf, key, content, GDBM_REPLACE)) {
+		ERR("failed to store value");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int __get_value(GDBM_FILE dbf, const char *pkgid, int *mode)
+{
+	datum key;
+	datum content;
+
+	key.dptr = (char *)pkgid;
+	key.dsize = strlen(pkgid) + 1;
+
+	content = gdbm_fetch(dbf, key);
+	if (content.dptr == NULL) {
+		DBG("no value for key(%s)", pkgid);
+		return -1;
+	}
+
+	if (content.dsize != VAL_SIZE)
+		ERR("content size is different");
+
+	memcpy(mode, content.dptr, VAL_SIZE);
+	free(content.dptr);
+
+	return 0;
+}
+
+int __restriction_mode_set(uid_t uid, const char *pkgid, int mode)
+{
+	GDBM_FILE dbf;
+	char *dbpath;
 	int cur = 0;
-	ssize_t len;
 
-	conf_path = _get_conf_file_path(uid);
-	if (conf_path == NULL) {
-		ERR("failed to get conf path");
+	if (pkgid == NULL)
+		pkgid = ALL_PKG;
+
+	dbpath = __get_dbpath(uid);
+	if (dbpath == NULL)
+		return -1;
+
+	dbf = __open(dbpath);
+	if (dbf == NULL) {
+		free(dbpath);
 		return -1;
 	}
 
-	fd = open(conf_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-	if (fd < 0) {
-		ERR("failed to open conf file: %d", errno);
-		free(conf_path);
-		return -1;
-	}
-
-	len = read(fd, &cur, sizeof(int));
-	if (len < 0) {
-		ERR("failed to read conf file: %d", errno);
-		close(fd);
-		free(conf_path);
-		return -1;
-	}
-
+	__get_value(dbf, pkgid, &cur);
 	mode = __set_mode(cur, mode);
 
-	lseek(fd, 0, SEEK_SET);
-	len = write(fd, &mode, sizeof(int));
-	if (len < 0) {
-		ERR("failed to write conf file: %d", errno);
-		close(fd);
-		free(conf_path);
+	if (__set_value(dbf, pkgid, mode)) {
+		free(dbpath);
 		return -1;
 	}
 
-	close(fd);
-	free(conf_path);
+	__close(dbf);
+	free(dbpath);
 
 	return 0;
 }
 
-int __unset_restriction_mode(uid_t uid, int mode)
+int __restriction_mode_unset(uid_t uid, const char *pkgid, int mode)
 {
-	char *conf_path;
-	int fd;
+	GDBM_FILE dbf;
+	char *dbpath;
 	int cur = 0;
-	ssize_t len;
 
-	conf_path = _get_conf_file_path(uid);
-	if (conf_path == NULL) {
-		ERR("failed to get conf path");
+	if (pkgid == NULL)
+		pkgid = ALL_PKG;
+
+	dbpath = __get_dbpath(uid);
+	if (dbpath == NULL)
+		return -1;
+
+	dbf = __open(dbpath);
+	if (dbf == NULL) {
+		free(dbpath);
 		return -1;
 	}
 
-	if (access(conf_path, F_OK) != 0) {
-		ERR("restriction mode is not set");
-		free(conf_path);
-		return 0;
-	}
-
-	fd = open(conf_path, O_RDWR, 0);
-	if (fd < 0) {
-		ERR("failed to open conf file: %s", errno);
-		free(conf_path);
-		return -1;
-	}
-
-	len = read(fd, &cur, sizeof(int));
-	if (len < 0) {
-		ERR("failed to read conf file: %d", errno);
-		close(fd);
-		free(conf_path);
-		return -1;
-	}
-
+	__get_value(dbf, pkgid, &cur);
 	mode = __unset_mode(cur, mode);
 
-	lseek(fd, 0, SEEK_SET);
-	len = write(fd, &mode, sizeof(int));
-	if (len < 0) {
-		ERR("failed to write conf file: %d", errno);
-		close(fd);
-		free(conf_path);
+	if (__set_value(dbf, pkgid, mode)) {
+		free(dbpath);
 		return -1;
 	}
 
-	close(fd);
-	free(conf_path);
+	__close(dbf);
+	free(dbpath);
 
 	return 0;
 }
 
-int __get_restriction_mode(uid_t uid, int *result)
+int __restriction_mode_get(uid_t uid, const char *pkgid, int *mode)
 {
-	char *conf_path;
-	int fd;
-	int cur;
-	ssize_t len;
+	GDBM_FILE dbf;
+	char *dbpath;
 
-	conf_path = _get_conf_file_path(uid);
-	if (conf_path == NULL)
+	if (pkgid == NULL)
+		pkgid = ALL_PKG;
+
+	dbpath = __get_dbpath(uid);
+	if (dbpath == NULL)
 		return -1;
 
-	if (access(conf_path, F_OK) != 0) {
-		free(conf_path);
-		*result = 0;
-		return 0;
-	}
-
-	fd = open(conf_path, O_RDONLY, 0);
-	if (fd < 0) {
-		ERR("failed to open conf file: %s", errno);
-		free(conf_path);
+	dbf = __open(dbpath);
+	if (dbf == NULL) {
+		free(dbpath);
 		return -1;
 	}
 
-	len = read(fd, &cur, sizeof(int));
-	if (len < 0) {
-		ERR("failed to read conf file: %d", errno);
-		close(fd);
-		free(conf_path);
-		return -1;
+	if (__get_value(dbf, pkgid, mode)) {
+		free(dbpath);
 	}
 
-	*result = cur;
-
-	close(fd);
-	free(conf_path);
+	__close(dbf);
+	free(dbpath);
 
 	return 0;
 }
