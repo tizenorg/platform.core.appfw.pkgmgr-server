@@ -217,12 +217,16 @@ static int __is_admin_user(uid_t uid)
 	return 1;
 }
 
+#define REGULAR_USER 5000
 static int __check_caller_permission(uid_t uid,
 		GDBusMethodInvocation *invocation, GVariant *parameters)
 {
 	GVariant *v;
 	uid_t target_uid;
 	int is_admin;
+
+	if (uid < REGULAR_USER)
+		return 0;
 
 	v = g_variant_get_child_value(parameters, 0);
 	if (v == NULL) {
