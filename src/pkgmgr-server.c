@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <grp.h>
 
 #include <glib.h>
 #include <gio/gio.h>
@@ -52,6 +53,10 @@
 
 #define OWNER_ROOT 0
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+
+#define EXT_STORAGE_GROUP 10001
+#define EXT_STORAGE_APPDATA_GROUP 10002
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 typedef struct  {
 	char **env;
@@ -551,10 +556,16 @@ int set_environement(user_ctx *ctx)
 	int i = 0;
 	int res = 0;
 	char **env = NULL;
+	gid_t groups[] = {EXT_STORAGE_GROUP, EXT_STORAGE_APPDATA_GROUP};
+
 	if (!ctx)
 		return -1;;
 	if (setgid(ctx->gid)) {
 		ERR("setgid failed: %d", errno);
+		return -1;
+	}
+	if (setgroups(ARRAY_SIZE(groups), groups) < 0) {
+		ERR("setgroups failed: %d", errno);
 		return -1;
 	}
 	if (setuid(ctx->uid)) {
