@@ -27,6 +27,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #include "pkgmgr-server.h"
 #include "pm-queue.h"
@@ -258,18 +259,31 @@ int _pm_queue_init(void)
 	return 0;
 }
 
+static void __convert_to_lower_case(char *dst, const char *src)
+{
+	int i;
+
+	for (i = 0; src[i] != '\0'; i++)
+		dst[i] = tolower(src[i]);
+	dst[i] = '\0';
+}
+
 int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
 		const char *queue_type, const char *pkgid, const char *args)
 {
 	pm_queue_data *data = NULL;
 	pm_queue_data *cur = NULL;
 	pm_queue_data *tmp = NULL;
-	int ret = 0;
-	ret = __is_pkg_supported(queue_type);
+	char type[MAX_PKG_NAME_LEN];
+	int ret;
+
+	__convert_to_lower_case(type, queue_type);
+
+	ret = __is_pkg_supported(type);
 	if (ret == 0)
 		return -1;
 
-	cur = __get_head_from_pkgtype(queue_type);
+	cur = __get_head_from_pkgtype(type);
 	tmp = cur;
 
 	/* TODO: use glist */
@@ -282,7 +296,7 @@ int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
 	snprintf(data->msg->req_id, sizeof(data->msg->req_id), "%s", req_id);
 	data->msg->req_type = req_type;
 	data->msg->uid = uid;
-	snprintf(data->msg->pkg_type, sizeof(data->msg->pkg_type), "%s", queue_type);
+	snprintf(data->msg->pkg_type, sizeof(data->msg->pkg_type), "%s", type);
 	snprintf(data->msg->pkgid, sizeof(data->msg->pkgid), "%s", pkgid);
 	snprintf(data->msg->args, sizeof(data->msg->args), "%s", args);
 
