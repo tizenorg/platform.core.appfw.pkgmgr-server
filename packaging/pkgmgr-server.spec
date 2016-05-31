@@ -64,5 +64,4 @@ mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server
-%exclude %{_sysconfdir}/package-manager/server/queue_status
 /usr/share/license/%{name}
