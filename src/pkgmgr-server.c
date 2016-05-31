@@ -123,85 +123,6 @@ static int __is_global(uid_t uid)
 	return (uid == OWNER_ROOT || uid == GLOBAL_USER) ? 1 : 0;
 }
 
-static const char *__get_recovery_file_path(uid_t uid)
-{
-	const char *path;
-
-	if (!__is_global(uid))
-		tzplatform_set_user(uid);
-
-	path = tzplatform_getenv(__is_global(uid)
-			? TZ_SYS_RW_PACKAGES : TZ_USER_PACKAGES);
-
-	tzplatform_reset_user();
-
-	return path;
-}
-
-static void __set_recovery_mode(uid_t uid, char *pkgid, char *pkg_type)
-{
-	char recovery_file[MAX_PKG_NAME_LEN] = { 0, };
-	char buffer[MAX_PKG_NAME_LEN] = { 0 };
-	char *pkgid_tmp = NULL;
-	FILE *rev_file = NULL;
-
-	if (pkgid == NULL) {
-		DBG("pkgid is null\n");
-		return;
-	}
-
-	/*if pkgid has a "/"charactor, that is a path name for installation, then extract pkgid from absolute path*/
-	if (strstr(pkgid, "/")) {
-		pkgid_tmp = strrchr(pkgid, '/') + 1;
-		if (pkgid_tmp == NULL) {
-			DBG("pkgid_tmp[%s] is null\n", pkgid);
-			return;
-		}
-		snprintf(recovery_file, sizeof(recovery_file), "%s/%s", __get_recovery_file_path(uid), pkgid_tmp);
-	} else {
-		snprintf(recovery_file, sizeof(recovery_file), "%s/%s", __get_recovery_file_path(uid), pkgid);
-	}
-
-	rev_file = fopen(recovery_file, "w");
-	if (rev_file== NULL) {
-		DBG("rev_file[%s] is null\n", recovery_file);
-		return;
-	}
-
-	snprintf(buffer, MAX_PKG_NAME_LEN, "pkgid : %s\n", pkgid);
-	fwrite(buffer, sizeof(char), strlen(buffer), rev_file);
-
-	fclose(rev_file);
-}
-
-static void __unset_recovery_mode(uid_t uid, char *pkgid, char *pkg_type)
-{
-	int ret = -1;
-	char recovery_file[MAX_PKG_NAME_LEN] = { 0, };
-	char *pkgid_tmp = NULL;
-
-	if (pkgid == NULL) {
-		DBG("pkgid is null\n");
-		return;
-	}
-
-	/*if pkgid has a "/"charactor, that is a path name for installation, then extract pkgid from absolute path*/
-	if (strstr(pkgid, "/")) {
-		pkgid_tmp = strrchr(pkgid, '/') + 1;
-		if (pkgid_tmp == NULL) {
-			DBG("pkgid_tmp[%s] is null\n", pkgid);
-			return;
-		}
-		snprintf(recovery_file, sizeof(recovery_file), "%s/%s", __get_recovery_file_path(uid), pkgid_tmp);
-	} else {
-		snprintf(recovery_file, sizeof(recovery_file), "%s/%s", __get_recovery_file_path(uid), pkgid);
-	}
-
-	ret = remove(recovery_file);
-	if (ret < 0)
-		DBG("remove recovery_file[%s] fail\n", recovery_file);
-}
-
 static void __send_app_signal(uid_t uid, const char *req_id,
 		const char *pkgid, const char *appid,
 		const char *key, const char *val, int req_type)
@@ -306,7 +227,6 @@ static gboolean pipe_io_handler(GIOChannel *io, GIOCondition cond, gpointer data
 	}
 
 	__set_backend_free(x);
-	__unset_recovery_mode(ptr->uid, ptr->pkgid, ptr->pkgtype);
 	if (WIFSIGNALED(info.status) || WEXITSTATUS(info.status)) {
 		send_fail_signal(ptr->pkgid, ptr->pkgtype, ptr->args);
 		DBG("backend[%s] exit with error", ptr->pkgtype);
@@ -1385,27 +1305,22 @@ gboolean queue_job(void *data)
 	switch (item->req_type) {
 	case PKGMGR_REQUEST_TYPE_INSTALL:
 		__set_backend_busy(x);
-		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_install(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_MOUNT_INSTALL:
 		__set_backend_busy(x);
-		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_mount_install(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_REINSTALL:
 		__set_backend_busy(x);
-		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_reinstall(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_UNINSTALL:
 		__set_backend_busy(x);
-		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_uninstall(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_MOVE:
 		__set_backend_busy(x);
-		__set_recovery_mode(item->uid, item->pkgid, item->pkg_type);
 		ret = __process_move(item);
 		break;
 	case PKGMGR_REQUEST_TYPE_ENABLE_PKG:
@@ -1562,51 +1477,6 @@ int main(int argc, char *argv[])
 	int r;
 
 	DBG("server start");
-
-	if (argv[1] && (strcmp(argv[1], "init") == 0)) {
-		/* if current status is "processing",
-		   execute related backend with '-r' option */
-		if (!(fp_status = fopen(STATUS_FILE, "r")))
-			return 0;	/*if file is not exist, terminated. */
-		/* if processing <-- unintended termination */
-		if (fgets(buf, 32, fp_status) &&
-				strcmp(buf, "processing") == 0) {
-			pid = fork();
-			if (pid == 0) {	/* child */
-				if (fgets(buf, 32, fp_status))
-					backend_cmd = _get_backend_cmd(buf);
-				if (!backend_cmd) {	/* if NULL, */
-					DBG("fail to get backend command");
-					goto err;
-				}
-				backend_name =
-					strrchr(backend_cmd, '/');
-				if (!backend_name) {
-					DBG("fail to get backend name");
-					goto err;
-				}
-
-				execl(backend_cmd, backend_name, "-r",
-						NULL);
-				if (backend_cmd)
-					free(backend_cmd);
-				fprintf(fp_status, " ");
-err:
-				fclose(fp_status);
-				exit(13);
-			} else if (pid < 0) {	/* error */
-				DBG("fork fail");
-				fclose(fp_status);
-				return 0;
-			} else {	/* parent */
-
-				DBG("parent end\n");
-				fprintf(fp_status, " ");
-				fclose(fp_status);
-				return 0;
-			}
-		}
-	}
 
 	r = _pm_queue_init();
 	if (r) {
