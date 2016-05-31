@@ -1563,51 +1563,6 @@ int main(int argc, char *argv[])
 
 	DBG("server start");
 
-	if (argv[1] && (strcmp(argv[1], "init") == 0)) {
-		/* if current status is "processing",
-		   execute related backend with '-r' option */
-		if (!(fp_status = fopen(STATUS_FILE, "r")))
-			return 0;	/*if file is not exist, terminated. */
-		/* if processing <-- unintended termination */
-		if (fgets(buf, 32, fp_status) &&
-				strcmp(buf, "processing") == 0) {
-			pid = fork();
-			if (pid == 0) {	/* child */
-				if (fgets(buf, 32, fp_status))
-					backend_cmd = _get_backend_cmd(buf);
-				if (!backend_cmd) {	/* if NULL, */
-					DBG("fail to get backend command");
-					goto err;
-				}
-				backend_name =
-					strrchr(backend_cmd, '/');
-				if (!backend_name) {
-					DBG("fail to get backend name");
-					goto err;
-				}
-
-				execl(backend_cmd, backend_name, "-r",
-						NULL);
-				if (backend_cmd)
-					free(backend_cmd);
-				fprintf(fp_status, " ");
-err:
-				fclose(fp_status);
-				exit(13);
-			} else if (pid < 0) {	/* error */
-				DBG("fork fail");
-				fclose(fp_status);
-				return 0;
-			} else {	/* parent */
-
-				DBG("parent end\n");
-				fprintf(fp_status, " ");
-				fclose(fp_status);
-				return 0;
-			}
-		}
-	}
-
 	r = _pm_queue_init();
 	if (r) {
 		DBG("Queue Initialization Failed\n");
