@@ -1,0 +1,7 @@
+[Unit]
+Description=Package Manager daemon
+
+[Service]
+ExecStart=@PREFIX@/bin/pkgmgr-server
+CapabilityBoundingSet=~CAP_MAC_ADMIN
+CapabilityBoundingSet=~CAP_MAC_OVERRIDE
