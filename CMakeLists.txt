@@ -48,7 +48,9 @@ TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} ${SERVER_DEPS_LDFLAGS} -lgdbm)
 
 CONFIGURE_FILE(org.tizen.pkgmgr.service.in org.tizen.pkgmgr.service @ONLY)
 CONFIGURE_FILE(org.tizen.pkgmgr.conf.in org.tizen.pkgmgr.conf @ONLY)
+CONFIGURE_FILE(package-manager.service.in package-manager.service @ONLY)
 
 INSTALL(TARGETS ${PKGMGR_SERVER} DESTINATION bin)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.pkgmgr.service DESTINATION ${PREFIX}/share/dbus-1/system-services/)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.tizen.pkgmgr.conf DESTINATION ${SYSCONF_INSTALL_DIR}/dbus-1/system.d/)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/package-manager.service DESTINATION ${UNITDIR})
