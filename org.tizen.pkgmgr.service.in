@@ -1,4 +1,5 @@
 [D-BUS Service]
 User=root
 Name=org.tizen.pkgmgr
-Exec=@PREFIX@/bin/pkgmgr-server
+Exec=@PREFIX@/bin/false
+SystemdService=pkgmgr-server.service
