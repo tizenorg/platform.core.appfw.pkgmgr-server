@@ -41,7 +41,7 @@ cp %{SOURCE1001} .
 %define backend_dir %{_sysconfdir}/package-manager/backend
 
 %build
-%cmake . -DRUN_DIR=%{run_dir} -DBACKEND_DIR=%{backend_dir}
+%cmake . -DRUN_DIR=%{run_dir} -DBACKEND_DIR=%{backend_dir} -DUNITDIR=%{_unitdir}
 
 %__make %{?_smp_mflags}
 
@@ -60,6 +60,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
+%{_unitdir}/package-manager.service
 %{_datadir}/dbus-1/system-services/org.tizen.pkgmgr.service
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
 %{_bindir}/pkgmgr-server
