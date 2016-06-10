@@ -96,6 +96,8 @@ typedef struct {
 typedef struct backend_info_t {
 	int pid;
 	uid_t uid;
+	int req_type;
+	char req_id[MAX_REQ_ID_LEN];
 	char pkgtype[MAX_PKG_TYPE_LEN];
 	char pkgid[MAX_PKG_NAME_LEN];
 	char args[MAX_PKG_ARGS_LEN];
