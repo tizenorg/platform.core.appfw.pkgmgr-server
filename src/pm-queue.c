@@ -405,7 +405,6 @@ void _pm_queue_final()
 	c = 0;
 	while(c < num_of_backends) {
 		if (!head[c]) { /* in case of head is NULL */
-			ERR("queue is NULL");
 			c = c + 1;
 			continue;
 		}
