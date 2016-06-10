@@ -172,30 +172,37 @@ catch:
 	return;
 }
 
-static void send_fail_signal(char *pname, char *ptype, char *args)
+static void __send_fail_signal(backend_info *info)
 {
-	DBG("send_fail_signal start\n");
-	gboolean ret_parse;
-	gint argcp;
-	gchar **argvp;
-	GError *gerr = NULL;
+	int req_type;
 	pkgmgr_installer *pi;
 	pi = pkgmgr_installer_new();
 	if (!pi) {
-		DBG("Failure in creating the pkgmgr_installer object");
+		ERR("Failure in creating the pkgmgr_installer object");
 		return;
 	}
-	ret_parse = g_shell_parse_argv(args,
-				       &argcp, &argvp, &gerr);
-	if (FALSE == ret_parse) {
-		DBG("Failed to split args: %s", args);
-		DBG("messsage: %s", gerr->message);
-		pkgmgr_installer_free(pi);
-		return;
+	pkgmgr_installer_set_session_id(pi, info->req_id);
+	switch(info->req_type) {
+	case PKGMGR_REQUEST_TYPE_INSTALL:
+	case PKGMGR_REQUEST_TYPE_MOUNT_INSTALL:
+	case PKGMGR_REQUEST_TYPE_REINSTALL:
+		req_type = PKGMGR_REQ_INSTALL;
+		break;
+	case PKGMGR_REQUEST_TYPE_UNINSTALL:
+		req_type = PKGMGR_REQ_UNINSTALL;
+		break;
+	case PKGMGR_REQUEST_TYPE_MOVE:
+		req_type = PKGMGR_REQ_MOVE;
+		break;
+	case PKGMGR_REQUEST_TYPE_GETSIZE:
+		req_type = PKGMGR_REQ_GETSIZE;
+		break;
+	default:
+		req_type = PKGMGR_REQ_INVALID;
+		break;
 	}
-
-	pkgmgr_installer_receive_request(pi, argcp, argvp);
-	pkgmgr_installer_send_signal(pi, ptype, pname, "end", "fail");
+	pkgmgr_installer_set_request_type(pi, req_type);
+	pkgmgr_installer_send_signal(pi, info->pkgtype, info->pkgid, "end", "fail");
 	pkgmgr_installer_free(pi);
 	return;
 }
@@ -228,7 +235,7 @@ static gboolean pipe_io_handler(GIOChannel *io, GIOCondition cond, gpointer data
 
 	__set_backend_free(x);
 	if (WIFSIGNALED(info.status) || WEXITSTATUS(info.status)) {
-		send_fail_signal(ptr->pkgid, ptr->pkgtype, ptr->args);
+		__send_fail_signal(ptr);
 		DBG("backend[%s] exit with error", ptr->pkgtype);
 	} else {
 		DBG("backend[%s] exit", ptr->pkgtype);
@@ -1301,11 +1308,13 @@ gboolean queue_job(void *data)
 		return FALSE;
 
 	/*save pkg type and pkg name for future*/
-	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN-1);
-	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN-1);
-	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN-1);
-	memset((item->appid),0,MAX_PKG_NAME_LEN);
+	strncpy(ptr->req_id, item->req_id, MAX_REQ_ID_LEN - 1);
+	strncpy(ptr->pkgtype, item->pkg_type, MAX_PKG_TYPE_LEN - 1);
+	strncpy(ptr->pkgid, item->pkgid, MAX_PKG_NAME_LEN - 1);
+	strncpy(ptr->args, item->args, MAX_PKG_ARGS_LEN - 1);
+	memset((item->appid), 0, MAX_PKG_NAME_LEN);
 	ptr->uid = item->uid;
+	ptr->req_type = item->req_type;
 	DBG("handle request type [%d]", item->req_type);
 
 	switch (item->req_type) {
