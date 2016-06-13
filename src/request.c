@@ -797,6 +797,7 @@ static int __handle_request_cleardata(uid_t uid,
 				pkgid, "")) {
 		g_dbus_method_invocation_return_value(invocation,
 				g_variant_new("(i)", PKGMGR_R_ESYSTEM));
+		free(reqkey);
 		return -1;
 	}
 
