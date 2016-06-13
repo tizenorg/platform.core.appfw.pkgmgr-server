@@ -185,9 +185,8 @@ int __restriction_mode_get(uid_t uid, const char *pkgid, int *mode)
 		return -1;
 	}
 
-	if (__get_value(dbf, pkgid, mode)) {
-		free(dbpath);
-	}
+	if (__get_value(dbf, pkgid, mode))
+		*mode = 0;
 
 	__close(dbf);
 	free(dbpath);
