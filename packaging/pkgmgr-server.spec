@@ -24,7 +24,7 @@ BuildRequires:  pkgconfig(pkgmgr)
 BuildRequires:  pkgconfig(pkgmgr-installer)
 BuildRequires:  pkgconfig(drm-service-core-tizen)
 BuildRequires:  pkgconfig(libgum)
-BuildRequires:  gdbm-devel
+BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgmgr-info-parser-devel
 BuildRequires:  pkgmgr-info-parser
 BuildRequires:  fdupes
@@ -37,10 +37,16 @@ Packager Manager server package for packaging
 cp %{SOURCE1001} .
 
 %define run_dir /run/user
+%define db_dir %{_localstatedir}/lib/package-manager
 %define backend_dir %{_sysconfdir}/package-manager/backend
 
 %build
-%cmake . -DRUN_DIR=%{run_dir} -DBACKEND_DIR=%{backend_dir} -DUNITDIR=%{_unitdir}
+sqlite3 restriction.db < ./restriction.sql
+
+%cmake . -DRUN_DIR=%{run_dir} \
+         -DDB_DIR=%{db_dir} \
+         -DBACKEND_DIR=%{backend_dir} \
+         -DUNITDIR=%{_unitdir}
 
 %__make %{?_smp_mflags}
 
@@ -50,6 +56,8 @@ cp %{SOURCE1001} .
 mkdir -p %{buildroot}/usr/share/license
 cp LICENSE %{buildroot}/usr/share/license/%{name}
 mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
+mkdir -p %{buildroot}%{db_dir}
+install -m 0600 restriction.db %{buildroot}%{db_dir}
 
 %fdupes %{buildroot}
 
@@ -62,6 +70,7 @@ mkdir -p %{buildroot}%{_sysconfdir}/package-manager/server
 %{_unitdir}/package-manager.service
 %{_datadir}/dbus-1/system-services/org.tizen.pkgmgr.service
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
+%config(noreplace) %{db_dir}/restriction.db
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server
 /usr/share/license/%{name}
