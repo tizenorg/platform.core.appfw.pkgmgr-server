@@ -107,8 +107,8 @@ gboolean queue_job(void *data);
 int __return_value_to_caller(const char *req_key, GVariant *result);
 int __init_request_handler(void);
 void __fini_request_handler(void);
-int __restriction_mode_set(uid_t uid, const char *pkgid, int mode);
-int __restriction_mode_unset(uid_t uid, const char *pkgid, int mode);
-int __restriction_mode_get(uid_t uid, const char *pkgid, int *mode);
+int _restriction_mode_set(uid_t uid, const char *pkgid, int mode);
+int _restriction_mode_unset(uid_t uid, const char *pkgid, int mode);
+int _restriction_mode_get(uid_t uid, const char *pkgid, int *mode);
 
 #endif/*  _PKGMGR_SERVER_H_ */
