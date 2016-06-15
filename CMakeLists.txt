@@ -36,6 +36,7 @@ pkg_check_modules(SERVER_DEPS REQUIRED
 		libtzplatform-config
 		drm-service-core-tizen
 		libgum
+		sqlite3
 		pkgmgr
 		pkgmgr-installer)
 FOREACH(SERVER_FLAGS ${SERVER_DEPS_CFLAGS})
@@ -44,7 +45,7 @@ ENDFOREACH(SERVER_FLAGS)
 
 ADD_EXECUTABLE(${PKGMGR_SERVER} ${SRCS})
 TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} pkgmgr_installer)
-TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} ${SERVER_DEPS_LDFLAGS} -lgdbm)
+TARGET_LINK_LIBRARIES(${PKGMGR_SERVER} ${SERVER_DEPS_LDFLAGS})
 
 CONFIGURE_FILE(org.tizen.pkgmgr.service.in org.tizen.pkgmgr.service @ONLY)
 CONFIGURE_FILE(org.tizen.pkgmgr.conf.in org.tizen.pkgmgr.conf @ONLY)
