@@ -1243,7 +1243,7 @@ static int __process_set_restriction_mode(pm_dbus_msg *item)
 	int mode;
 
 	mode = atoi(item->args);
-	ret = __restriction_mode_set(item->uid, item->pkgid, mode);
+	ret = _restriction_mode_set(item->uid, item->pkgid, mode);
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", ret));
@@ -1257,7 +1257,7 @@ static int __process_unset_restriction_mode(pm_dbus_msg *item)
 	int mode;
 
 	mode = atoi(item->args);
-	ret = __restriction_mode_unset(item->uid, item->pkgid, mode);
+	ret = _restriction_mode_unset(item->uid, item->pkgid, mode);
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(i)", ret));
@@ -1270,7 +1270,7 @@ static int __process_get_restriction_mode(pm_dbus_msg *item)
 	int ret;
 	int mode = -1;
 
-	ret = __restriction_mode_get(item->uid, item->pkgid, &mode);
+	ret = _restriction_mode_get(item->uid, item->pkgid, &mode);
 
 	__return_value_to_caller(item->req_id,
 			g_variant_new("(ii)", mode, ret));
