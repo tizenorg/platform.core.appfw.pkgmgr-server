@@ -15,7 +15,11 @@ ADD_DEFINITIONS(-DDB_DIR="${DB_DIR}")
 ADD_DEFINITIONS(-DRUN_DIR="${RUN_DIR}")
 ADD_DEFINITIONS(-DBACKEND_DIR="${BACKEND_DIR}")
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -g -Wall")
+## Compiler flags
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -g -Wall -fPIE")
+
+## Linker flags
+SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed -pie")
 
 INCLUDE_DIRECTORIES(include)
 INCLUDE(FindPkgConfig)
