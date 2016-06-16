@@ -144,7 +144,7 @@ int _pm_queue_init(void)
 	/*Find the num of backends currently supported and initialize
 	that many queues. It is dynamically determined.*/
 	struct dirent **namelist;
-	struct stat fileinfo;
+	struct stat fileinfo = {0};
 	queue_info_map *ptr = NULL;
 	int n = 0;
 	int c = 0;
