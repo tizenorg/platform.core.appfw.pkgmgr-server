@@ -70,6 +70,7 @@ install -m 0600 restriction.db %{buildroot}%{db_dir}
 %{_unitdir}/package-manager.service
 %{_datadir}/dbus-1/system-services/org.tizen.pkgmgr.service
 %config %{_sysconfdir}/dbus-1/system.d/org.tizen.pkgmgr.conf
+%config(noreplace) %{db_dir}
 %config(noreplace) %{db_dir}/restriction.db
 %{_bindir}/pkgmgr-server
 %{_sysconfdir}/package-manager/server

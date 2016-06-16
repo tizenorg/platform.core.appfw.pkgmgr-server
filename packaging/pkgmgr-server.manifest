@@ -4,7 +4,7 @@
 	</request>
 	<assign>
 		<filesystem path="/usr/bin/pkgmgr-server" label="System" exec_label="none" />
-		<filesystem path="/var/lib/package-manager/" label="System" />
+		<filesystem path="/var/lib/package-manager" label="System" />
 		<filesystem path="/var/lib/package-manager/restriction.db" label="System" />
 	</assign>
 </manifest>
