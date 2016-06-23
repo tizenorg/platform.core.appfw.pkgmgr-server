@@ -56,6 +56,7 @@
 
 #define EXT_STORAGE_GROUP 10001
 #define EXT_STORAGE_APPDATA_GROUP 10002
+#define MEDIA_STORAGE_GROUP 10502
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
 typedef struct  {
@@ -561,7 +562,9 @@ int set_environement(user_ctx *ctx)
 	int i = 0;
 	int res = 0;
 	char **env = NULL;
-	gid_t groups[] = {EXT_STORAGE_GROUP, EXT_STORAGE_APPDATA_GROUP};
+	gid_t groups[] = {EXT_STORAGE_GROUP,
+		EXT_STORAGE_APPDATA_GROUP,
+		MEDIA_STORAGE_GROUP};
 
 	if (!ctx)
 		return -1;;
