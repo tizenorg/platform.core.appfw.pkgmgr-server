@@ -9,6 +9,12 @@
 		<allow send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="unset_restriction_mode"/>
 		<allow send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="get_restriction_mode"/>
 	</policy>
+	<policy user="app_fw">
+		<allow own="org.tizen.pkgmgr"/>
+		<allow send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="set_restriction_mode"/>
+		<allow send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="unset_restriction_mode"/>
+		<allow send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="get_restriction_mode"/>
+	</policy>
 	<policy context="default">
                 <allow send_destination="org.tizen.pkgmgr"/>
 		<check send_destination="org.tizen.pkgmgr" send_interface="org.tizen.pkgmgr" send_member="install" privilege="http://tizen.org/privilege/packagemanager.admin"/>

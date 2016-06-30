@@ -65,6 +65,10 @@ typedef struct  {
 	gid_t gid;
 } user_ctx;
 
+typedef struct {
+	uid_t uid;
+	char *cmd;
+} pkgcmd_data;
 
 /*
 8 bit value to represent maximum 8 backends.
@@ -398,10 +402,16 @@ static int __pkgcmd_find_pid_by_cmdline(const char *dname,
 			const char *cmdline, const char *apppath)
 {
 	int pid = 0;
+	int pgid = 0;
 
 	if (strcmp(cmdline, apppath) == 0) {
 		pid = atoi(dname);
-		if (pid != getpgid(pid))
+		pgid = getpgid(pid);
+		if (pgid < 0) {
+			ERR("getpgid failed, errno(%d)", errno);
+			pid = 0;
+		}
+		if (pid != pgid)
 			pid = 0;
 	}
 	return pid;
@@ -441,10 +451,12 @@ static int __pkgcmd_proc_iter_kill_cmdline(const char *apppath, int option)
 			pgid = getpgid(pid);
 			if (pgid <= 1) {
 				closedir(dp);
+				ERR("getpgid failed, errno(%d)", errno);
 				return -1;
 			}
 			if (killpg(pgid, SIGKILL) < 0) {
 				closedir(dp);
+				ERR("killpg failed, errno(%d)", errno);
 				return -1;
 			}
 			closedir(dp);
@@ -455,15 +467,25 @@ static int __pkgcmd_proc_iter_kill_cmdline(const char *apppath, int option)
 	return 0;
 }
 
-static void __make_pid_info_file(char *req_key, int pid)
+static void __make_pid_info_file(char *req_key, int pid, uid_t uid)
 {
 	FILE* file;
 	int fd;
+	int ret;
 	char buf[MAX_PKG_TYPE_LEN] = {0};
 	char info_file[PATH_MAX] = {'\0'};
+	struct passwd pwd;
+	struct passwd *pwd_result;
 
 	if(req_key == NULL)
 		return;
+
+	ret = getpwuid_r(uid, &pwd, buf, sizeof(buf), &pwd_result);
+	if (ret != 0 || pwd_result == NULL) {
+		ERR("get uid failed(%d) for user(%d)", ret, uid);
+		return;
+	}
+	DBG("uid(%d), gid(%d)", uid, pwd.pw_gid);
 
 	snprintf(info_file, PATH_MAX, "/tmp/pkgmgr/%s", req_key);
 
@@ -479,6 +501,10 @@ static void __make_pid_info_file(char *req_key, int pid)
 
 	fflush(file);
 	fd = fileno(file);
+	if (fchmod(fd, 0777) < 0)
+		ERR("chmod failed, errno(%d)", errno);
+	if (fchown(fd, uid, pwd.pw_gid) < 0)
+		ERR("chown failed, errno(%d)", errno);
 	fsync(fd);
 	fclose(file);
 }
@@ -514,6 +540,7 @@ static int __pkgcmd_app_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 	char *exec;
 	int ret;
 	int pid = -1;
+	pkgcmd_data *pdata = (pkgcmd_data *)user_data;
 
 	if (handle == NULL) {
 		perror("appinfo handle is NULL\n");
@@ -530,12 +557,12 @@ static int __pkgcmd_app_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 		exit(1);
 	}
 
-	if (strcmp(user_data, "kill") == 0)
+	if (strcmp(pdata->cmd, "kill") == 0)
 		pid = __pkgcmd_proc_iter_kill_cmdline(exec, 1);
-	else if(strcmp(user_data, "check") == 0)
+	else if(strcmp(pdata->cmd, "check") == 0)
 		pid = __pkgcmd_proc_iter_kill_cmdline(exec, 0);
 
-	__make_pid_info_file(pkgid, pid);
+	__make_pid_info_file(pkgid, pid, pdata->uid);
 
 	return 0;
 }
@@ -1098,6 +1125,7 @@ static int __process_kill(pm_dbus_msg *item)
 {
 	int ret;
 	pkgmgrinfo_pkginfo_h handle;
+	pkgcmd_data *pdata = NULL;
 
 	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(item->pkgid, item->uid,
 			&handle);
@@ -1106,8 +1134,24 @@ static int __process_kill(pm_dbus_msg *item)
 		return -1;
 	}
 
+	pdata = calloc(1, sizeof(pkgcmd_data));
+	if (pdata == NULL) {
+		ERR("memory alloc failed");
+		return -1;
+	}
+	pdata->cmd = strdup("kill");
+	if (pdata->cmd == NULL) {
+		ERR("out of memory");
+		free(pdata);
+		pdata = NULL;
+		return -1;
+	}
+	pdata->uid = item->uid;
 	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
-			__pkgcmd_app_cb, "kill", item->uid);
+			__pkgcmd_app_cb, pdata, item->uid);
+	free(pdata->cmd);
+	free(pdata);
+	pdata = NULL;
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 	if (ret < 0) {
 		ERR("pkgmgrinfo_appinfo_get_list() failed");
@@ -1121,6 +1165,7 @@ static int __process_check(pm_dbus_msg *item)
 {
 	int ret;
 	pkgmgrinfo_pkginfo_h handle;
+	pkgcmd_data *pdata = NULL;
 
 	ret = pkgmgrinfo_pkginfo_get_usr_pkginfo(item->pkgid, item->uid,
 			&handle);
@@ -1129,8 +1174,24 @@ static int __process_check(pm_dbus_msg *item)
 		return -1;
 	}
 
+	pdata = calloc(1, sizeof(pkgcmd_data));
+	if (pdata == NULL) {
+		ERR("memory alloc failed");
+		return -1;
+	}
+	pdata->cmd = strdup("check");
+	if (pdata->cmd == NULL) {
+		ERR("out of memory");
+		free(pdata);
+		pdata = NULL;
+		return -1;
+	}
+	pdata->uid = item->uid;
 	ret = pkgmgrinfo_appinfo_get_usr_list(handle, PMINFO_ALL_APP,
-			__pkgcmd_app_cb, "check", item->uid);
+			__pkgcmd_app_cb, pdata, item->uid);
+	free(pdata->cmd);
+	free(pdata);
+	pdata = NULL;
 	pkgmgrinfo_pkginfo_destroy_pkginfo(handle);
 	if (ret < 0) {
 		ERR("pkgmgrinfo_appinfo_get_list() failed");

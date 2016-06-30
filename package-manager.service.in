@@ -2,6 +2,6 @@
 Description=Tizen Package Manager
 
 [Service]
+User=app_fw
+Group=app_fw
 ExecStart=@PREFIX@/bin/pkgmgr-server
-CapabilityBoundingSet=~CAP_MAC_ADMIN
-CapabilityBoundingSet=~CAP_MAC_OVERRIDE
