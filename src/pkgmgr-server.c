@@ -53,6 +53,8 @@
 
 #define OWNER_ROOT 0
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define APPFW_UID 301
+
 
 #define EXT_STORAGE_GROUP 10001
 #define EXT_STORAGE_APPDATA_GROUP 10002
@@ -730,7 +732,7 @@ static int __fork_and_exec_with_args(char **argv, uid_t uid)
 
 	user_context = get_user_context(uid);
 	if (!user_context) {
-		DBG("Failed to getenv for the user : %d", uid);
+		DBG("Failed to getenv");
 		return -1;
 	}
 
@@ -812,12 +814,12 @@ static int __process_install(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -i %s %s", backend_cmd,
-			item->req_id, item->pkgid, item->args);
+	snprintf(args, sizeof(args), "%s -k %s -i %s -u %d %s", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid, item->args);
 
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 	g_strfreev(argv);
 	free(backend_cmd);
 
@@ -835,12 +837,12 @@ static int __process_mount_install(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -w %s %s", backend_cmd,
-					 item->req_id, item->pkgid, item->args);
+	snprintf(args, sizeof(args), "%s -k %s -w %s -u %d %s", backend_cmd,
+					 item->req_id, item->pkgid, (int)item->uid, item->args);
 
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 	g_strfreev(argv);
 	free(backend_cmd);
 
@@ -858,11 +860,11 @@ static int __process_reinstall(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -r %s", backend_cmd,
-			item->req_id, item->pkgid);
+	snprintf(args, sizeof(args), "%s -k %s -r %s -u %d", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -881,11 +883,11 @@ static int __process_uninstall(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -d %s", backend_cmd,
-			item->req_id, item->pkgid);
+	snprintf(args, sizeof(args), "%s -k %s -d %s -u %d", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -904,11 +906,11 @@ static int __process_move(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -m %s -t %s", backend_cmd,
-			item->req_id, item->pkgid, item->args);
+	snprintf(args, sizeof(args), "%s -k %s -m %s -u %d -t %s", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid, item->args);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -927,11 +929,11 @@ static int __process_enable_pkg(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -A %s", backend_cmd,
-			item->req_id, item->pkgid);
+	snprintf(args, sizeof(args), "%s -k %s -u %d -A %s", backend_cmd,
+			item->req_id, (int)item->uid, item->pkgid);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -950,11 +952,11 @@ static int __process_disable_pkg(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -D %s", backend_cmd,
-			item->req_id, item->pkgid);
+	snprintf(args, sizeof(args), "%s -k %s -u %d -D %s", backend_cmd,
+			item->req_id, (int)item->uid, item->pkgid);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
@@ -1127,11 +1129,11 @@ static int __process_cleardata(pm_dbus_msg *item)
 		return -1;
 
 	/* TODO: set movetype */
-	snprintf(args, sizeof(args), "%s -k %s -c %s", backend_cmd,
-			item->req_id, item->pkgid);
+	snprintf(args, sizeof(args), "%s -k %s -c %s -u %d", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid);
 	argv = __generate_argv(args);
 
-	pid = __fork_and_exec_with_args(argv, item->uid);
+	pid = __fork_and_exec_with_args(argv, APPFW_UID);
 
 	g_strfreev(argv);
 	free(backend_cmd);
