@@ -621,6 +621,8 @@ user_ctx *get_user_context(uid_t uid)
 			break;
 		}
 		// Build environment context
+		DBG("jungh pw_dir is [%s]", pwd.pw_dir);
+		DBG("jungh pw_dir is [%s]", pwd.pw_name);
 		len = snprintf(NULL, 0, "HOME=%s", pwd.pw_dir);
 		env[0] = (char *)malloc((len + 1) * sizeof(char));
 		if(env[0] == NULL) {
@@ -701,9 +703,9 @@ static int __fork_and_exec_with_args(char **argv, uid_t uid)
 	gboolean ret;
 	int pid;
 
-	user_context = get_user_context(uid);
+	user_context = get_user_context((uid_t)301); // jungh.yeon temp fix to 301 for app_fw user
 	if (!user_context) {
-		DBG("Failed to getenv for the user : %d", uid);
+		DBG("Failed to getenv for the user : %d", 301);
 		return -1;
 	}
 
@@ -785,8 +787,8 @@ static int __process_install(pm_dbus_msg *item)
 	if (backend_cmd == NULL)
 		return -1;
 
-	snprintf(args, sizeof(args), "%s -k %s -i %s %s", backend_cmd,
-			item->req_id, item->pkgid, item->args);
+	snprintf(args, sizeof(args), "%s -k %s -i %s -u %d %s", backend_cmd,
+			item->req_id, item->pkgid, (int)item->uid, item->args);
 
 	argv = __generate_argv(args);
 
