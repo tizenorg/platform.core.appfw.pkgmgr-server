@@ -261,9 +261,8 @@ static int __get_pkg_restriction_mode(uid_t uid, const char *pkgid, int *mode)
 	sqlite3_stmt *stmt;
 
 	db = __open_db();
-	if (db == NULL) {
+	if (db == NULL)
 		return -1;
-	}
 
 	ret = sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {

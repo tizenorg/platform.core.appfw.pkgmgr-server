@@ -187,7 +187,7 @@ static void __send_fail_signal(backend_info *info)
 		return;
 	}
 	pkgmgr_installer_set_session_id(pi, info->req_id);
-	switch(info->req_type) {
+	switch (info->req_type) {
 	case PKGMGR_REQUEST_TYPE_INSTALL:
 	case PKGMGR_REQUEST_TYPE_MOUNT_INSTALL:
 	case PKGMGR_REQUEST_TYPE_REINSTALL:
@@ -325,8 +325,7 @@ static int __register_signal_handler(void)
 static int __check_backend_status_for_exit(void)
 {
 	int i = 0;
-	for(i = 0; i < num_of_backends; i++)
-	{
+	for (i = 0; i < num_of_backends; i++)	{
 		if (!__is_backend_busy(i))
 			continue;
 		else
@@ -343,21 +342,18 @@ static int __check_queue_status_for_exit(void)
 	int i = 0;
 	int c = 0;
 	int slot = -1;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++)	{
 		if (ptr->queue_slot <= slot) {
 			ptr++;
 			continue;
-		}
-		else {
+		} else {
 			head[c] = ptr->head;
 			slot = ptr->queue_slot;
 			c++;
 			ptr++;
 		}
 	}
-	for(i = 0; i < num_of_backends; i++)
-	{
+	for (i = 0; i < num_of_backends; i++)	{
 		if (!head[i])
 			continue;
 		else
@@ -427,9 +423,8 @@ static int __pkgcmd_proc_iter_kill_cmdline(const char *apppath, int option)
 	int pgid;
 
 	dp = opendir("/proc");
-	if (dp == NULL) {
+	if (dp == NULL)
 		return -1;
-	}
 
 	for (ret = readdir_r(dp, &dentry, &result);
 			ret == 0 && result != NULL;
@@ -477,7 +472,7 @@ static void __make_pid_info_file(char *req_key, int pid, uid_t uid)
 	struct passwd pwd;
 	struct passwd *pwd_result;
 
-	if(req_key == NULL)
+	if (req_key == NULL)
 		return;
 
 	ret = getpwuid_r(uid, &pwd, buf, sizeof(buf), &pwd_result);
@@ -526,9 +521,8 @@ static int __kill_app(char *appid, uid_t uid)
 	}
 
 	ret = __pkgcmd_proc_iter_kill_cmdline(exec, 1);
-	if (ret != PMINFO_R_OK) {
+	if (ret != PMINFO_R_OK)
 		DBG("failed to kill app[%s], exec[%s]", appid, exec);
-	}
 
 	pkgmgrinfo_appinfo_destroy_appinfo(appinfo);
 	return ret;
@@ -559,7 +553,7 @@ static int __pkgcmd_app_cb(const pkgmgrinfo_appinfo_h handle, void *user_data)
 
 	if (strcmp(pdata->cmd, "kill") == 0)
 		pid = __pkgcmd_proc_iter_kill_cmdline(exec, 1);
-	else if(strcmp(pdata->cmd, "check") == 0)
+	else if (strcmp(pdata->cmd, "check") == 0)
 		pid = __pkgcmd_proc_iter_kill_cmdline(exec, 0);
 
 	__make_pid_info_file(pkgid, pid, pdata->uid);
@@ -574,7 +568,7 @@ void free_user_context(user_ctx* ctx)
 	if (!ctx)
 		return;
 	env = ctx->env;
-	//env variable ends by NULL element
+	/* env variable ends by NULL element */
 	while (env[i]) {
 		free(env[i]);
 		i++;
@@ -608,7 +602,7 @@ int set_environement(user_ctx *ctx)
 		return -1;
 	}
 	env = ctx->env;
-	//env variable ends by NULL element
+	/* env variable ends by NULL element */
 	while (env[i]) {
 		if (putenv(env[i]) != 0)
 			res = -1;
@@ -647,17 +641,17 @@ user_ctx *get_user_context(uid_t uid)
 			ret = -1;
 			break;
 		}
-		// Build environment context
+		/* Build environment context */
 		len = snprintf(NULL, 0, "HOME=%s", pwd.pw_dir);
 		env[0] = (char *)malloc((len + 1) * sizeof(char));
-		if(env[0] == NULL) {
+		if (env[0] == NULL) {
 			ret = -1;
 			break;
 		}
 		snprintf(env[0], len + 1, "HOME=%s", pwd.pw_dir);
 		len = snprintf(NULL, 0, "USER=%s", pwd.pw_name);
 		env[1] = (char *)malloc((len + 1) * sizeof(char));
-		if(env[1] == NULL) {
+		if (env[1] == NULL) {
 			ret = -1;
 			break;
 		}
@@ -669,7 +663,7 @@ user_ctx *get_user_context(uid_t uid)
 		free(context_res);
 		context_res = NULL;
 		i = 0;
-		//env variable ends by NULL element
+		/* env variable ends by NULL element */
 		while (env && env[i]) {
 			free(env[i]);
 			i++;
@@ -1504,10 +1498,10 @@ char *_get_backend_cmd(char *type)
 	char buffer[1024] = { 0 };
 	char *command = NULL;
 	int size = 0;
+
 	fp = fopen(PKG_CONF_PATH, "r");
-	if (fp == NULL) {
+	if (fp == NULL)
 		return NULL;
-	}
 
 	char *path = NULL;
 	while (fgets(buffer, 1024, fp) != NULL) {
@@ -1578,7 +1572,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-#if !GLIB_CHECK_VERSION(2,35,0)
+#if !GLIB_CHECK_VERSION(2, 35, 0)
 	g_type_init();
 #endif
 	mainloop = g_main_loop_new(NULL, FALSE);
