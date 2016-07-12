@@ -372,16 +372,14 @@ static int __handle_request_mount_install(uid_t uid,
 
 	if (target_uid == (uid_t)-1 || pkgtype == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-		                                      g_variant_new("(is)",
-		                                                    PKGMGR_R_ECOMM, ""));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		ret = -1;
 		goto catch;
 	}
 
 	if (pkgpath == NULL) {
 		g_dbus_method_invocation_return_value(invocation,
-		                                      g_variant_new("(is)",
-		                                                    PKGMGR_R_ECOMM, ""));
+				g_variant_new("(is)", PKGMGR_R_ECOMM, ""));
 		ret = -1;
 		goto catch;
 	}
@@ -393,21 +391,18 @@ static int __handle_request_mount_install(uid_t uid,
 	}
 
 	if (_pm_queue_push(target_uid, reqkey, PKGMGR_REQUEST_TYPE_MOUNT_INSTALL,
-                       pkgtype, pkgpath, args)) {
-	g_dbus_method_invocation_return_value(invocation,
-	                                      g_variant_new("(is)",
-	                                                    PKGMGR_R_ESYSTEM, ""));
+			pkgtype, pkgpath, args)) {
+		g_dbus_method_invocation_return_value(invocation,
+				g_variant_new("(is)", PKGMGR_R_ESYSTEM, ""));
 		ret = -1;
 		goto catch;
 	}
 
 	g_dbus_method_invocation_return_value(invocation,
-	                                      g_variant_new("(is)",
-	                                                    PKGMGR_R_OK,
-	                                                    reqkey));
+			g_variant_new("(is)", PKGMGR_R_OK, reqkey));
 	ret = 0;
 
-	catch:
+catch:
 	if (reqkey)
 		free(reqkey);
 
@@ -623,7 +618,7 @@ static int __handle_request_enable_app(uid_t uid,
 	ret = 0;
 
 catch:
-	if(reqkey)
+	if (reqkey)
 		free(reqkey);
 
 	return ret;
@@ -1301,8 +1296,7 @@ int __return_value_to_caller(const char *req_key, GVariant *result)
 	return 0;
 }
 
-static const GDBusInterfaceVTable interface_vtable =
-{
+static const GDBusInterfaceVTable interface_vtable = {
 	__handle_method_call,
 	NULL,
 	NULL,
