@@ -56,14 +56,11 @@ static int __is_pkg_supported(const char *pkgtype)
 	queue_info_map *ptr = NULL;
 	ptr = start;
 	int i = 0;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (!strncmp(ptr->pkgtype, pkgtype, MAX_PKG_TYPE_LEN))
 			return 1;
-		else {
+		else
 			ptr++;
-			continue;
-		}
 	}
 	return 0;
 }
@@ -77,14 +74,11 @@ static int __entry_exist(char *backend)
 	queue_info_map *ptr = NULL;
 	ptr = start;
 	int i = 0;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (!strncmp(ptr->backend, backend, MAX_PKG_NAME_LEN))
 			return ptr->queue_slot;
-		else {
+		else
 			ptr++;
-			continue;
-		}
 	}
 	return -1;
 }
@@ -97,24 +91,20 @@ static void __update_head_from_pkgtype(pm_queue_data *data)
 	ptr = start;
 	int slot = -1;
 	int i = 0;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (!strncmp(ptr->pkgtype, data->msg->pkg_type, MAX_PKG_TYPE_LEN)) {
 			ptr->head = data;
 			slot = ptr->queue_slot;
-		}
-		else {
+		} else {
 			ptr++;
-			continue;
 		}
 	}
 	/*update head for each duplicate entry*/
 	ptr = start;
-	for(i = 0; i < entries; i++)
-	{
-		if(ptr->queue_slot == slot && !ptr->head) {
+	for (i = 0; i < entries; i++) {
+		if (ptr->queue_slot == slot && !ptr->head)
 			ptr->head = data;
-		}
+
 		ptr++;
 	}
 	return;
@@ -126,14 +116,11 @@ static pm_queue_data *__get_head_from_pkgtype(const char *pkg_type)
 	queue_info_map *ptr = NULL;
 	ptr = start;
 	int i = 0;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (!strncmp(ptr->pkgtype, pkg_type, MAX_PKG_TYPE_LEN))
 			return ptr->head;
-		else {
+		else
 			ptr++;
-			continue;
-		}
 	}
 	return NULL;
 
@@ -158,15 +145,14 @@ int _pm_queue_init(void)
 		return -1;
 	}
 	i = n;
-	/*Find number of backends (symlinks + executables)
-	The backend dir should not conatin any other file except the backends.*/
-	while(n--)
-	{
-		if(!strcmp(namelist[n]->d_name, ".") ||
-			!strcmp(namelist[n]->d_name, ".."))
+	/* Find number of backends (symlinks + executables)
+	The backend dir should not conatin any other file except the backends. */
+	while (n--) {
+		if (!strcmp(namelist[n]->d_name, ".") ||
+				!strcmp(namelist[n]->d_name, ".."))
 				continue;
 		snprintf(abs_filename, MAX_PKG_NAME_LEN, "%s/%s",
-			BACKEND_DIR, namelist[n]->d_name);
+				BACKEND_DIR, namelist[n]->d_name);
 		if (lstat(abs_filename, &fileinfo)) {
 			perror("lstat");
 			continue;
@@ -176,24 +162,22 @@ int _pm_queue_init(void)
 		c++;
 		memset(abs_filename, 0x00, MAX_PKG_NAME_LEN);
 	}
-	/*Add entries to info map.*/
+	/* Add entries to info map. */
 	ptr = (queue_info_map*)calloc(c , sizeof(queue_info_map));
 	memset(ptr, '\0', c * sizeof(queue_info_map));
 	start = ptr;
-	for(n = 0; n < c ; n++)
-	{
+	for (n = 0; n < c ; n++) {
 		ptr->backend[0] = '\0';
 		ptr->head = NULL;
-		ptr->queue_slot = -2;/*-1 can be error return*/
+		ptr->queue_slot = -2; /* -1 can be error return */
 		ptr->pkgtype[0] = '\0';
 		ptr++;
 	}
 	n = i;
 	ptr = start;
-	while(n--)
-	{
-		if(!strcmp(namelist[n]->d_name, ".") ||
-			!strcmp(namelist[n]->d_name, ".."))
+	while (n--) {
+		if (!strcmp(namelist[n]->d_name, ".") ||
+				!strcmp(namelist[n]->d_name, ".."))
 				continue;
 		snprintf(abs_filename, MAX_PKG_NAME_LEN, "%s/%s",
 			BACKEND_DIR, namelist[n]->d_name);
@@ -212,9 +196,8 @@ int _pm_queue_init(void)
 				return -1;
 			}
 			buf[ret] = '\0';
-		}
-		/*executable*/
-		else {
+		} else {
+			/*executable*/
 			snprintf(buf, sizeof(buf), "%s", abs_filename);
 		}
 		ret = __entry_exist(buf);
@@ -226,8 +209,7 @@ int _pm_queue_init(void)
 			entries++;
 			slot++;
 			ptr++;
-		}
-		else {
+		} else {
 			snprintf(ptr->backend, sizeof(ptr->backend), "%s", buf);
 			snprintf(ptr->pkgtype, sizeof(ptr->pkgtype), "%s", namelist[n]->d_name);
 			ptr->queue_slot = ret;
@@ -249,8 +231,7 @@ int _pm_queue_init(void)
 	DBG("Number of Entries is %d", entries);
 	DBG("Backend\tType\tSlot\tHead");
 	ptr = start;
-	for(n = 0; n < entries; n++)
-	{
+	for (n = 0; n < entries; n++) {
 		DBG("%s\t%s\t%d\t%p", ptr->backend, ptr->pkgtype, ptr->queue_slot, ptr->head);
 		ptr++;
 	}
@@ -306,8 +287,7 @@ int _pm_queue_push(uid_t uid, const char *req_id, int req_type,
 		/* first push */
 		cur = data;
 		__update_head_from_pkgtype(data);
-	}
-	else {
+	} else {
 		while (tmp->next)
 			tmp = tmp->next;
 
@@ -332,8 +312,7 @@ pm_dbus_msg *_pm_queue_pop(int position)
 	}
 	memset(ret, 0x00, sizeof(pm_dbus_msg));
 	ptr = start;
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (ptr->queue_slot == position) {
 				cur = ptr->head;
 				break;
@@ -358,19 +337,18 @@ pm_dbus_msg *_pm_queue_pop(int position)
 	cur->next = NULL;
 	free(cur->msg);
 	free(cur);
-	/*update head for each duplicate queue entry*/
+	/* update head for each duplicate queue entry */
 	ptr = start;
-	for(i = 0; i < entries; i++)
-	{
-		if(ptr->queue_slot == position) {
+	for (i = 0; i < entries; i++) {
+		if (ptr->queue_slot == position)
 			ptr->head = saveptr;
-		}
+
 		ptr++;
 	}
 	return ret;
 }
 
-/*populate an array of all queue heads and delete them one by one*/
+/* populate an array of all queue heads and delete them one by one */
 void _pm_queue_final()
 {
 	int c = 0;
@@ -383,18 +361,14 @@ void _pm_queue_final()
 	queue_info_map *ptr = NULL;
 	ptr = start;
 
-	for(i = 0; i < num_of_backends; i++)
-	{
+	for (i = 0; i < num_of_backends; i++)
 		head[i] = NULL;
-	}
 
-	for(i = 0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (ptr->queue_slot <= slot) {
 			ptr++;
 			continue;
-		}
-		else {
+		} else {
 			head[c] = ptr->head;
 			slot = ptr->queue_slot;
 			c++;
@@ -403,7 +377,7 @@ void _pm_queue_final()
 	}
 
 	c = 0;
-	while(c < num_of_backends) {
+	while (c < num_of_backends) {
 		if (!head[c]) { /* in case of head is NULL */
 			c = c + 1;
 			continue;
@@ -485,8 +459,7 @@ void _print_queue(int position)
 	pm_queue_data *cur = NULL;
 	queue_info_map *ptr = start;
 	int i = 0;
-	for(i =0; i < entries; i++)
-	{
+	for (i = 0; i < entries; i++) {
 		if (ptr->queue_slot == position) {
 				cur = ptr->head;
 				break;
@@ -494,9 +467,8 @@ void _print_queue(int position)
 		ptr++;
 	}
 	int index = 1;
-	if (!cur) {
+	if (!cur)
 		return;
-	}
 
 	while (cur) {
 		index++;
