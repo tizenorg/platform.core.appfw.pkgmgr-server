@@ -1219,9 +1219,9 @@ static void __handle_method_call(GDBusConnection *connection,
 		ret = __handle_request_cleardata(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "move") == 0)
 		ret = __handle_request_move(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "enable") == 0)
+	else if (g_strcmp0(method_name, "enable_pkg") == 0)
 		ret = __handle_request_enable_pkg(uid, invocation, parameters);
-	else if (g_strcmp0(method_name, "disable") == 0)
+	else if (g_strcmp0(method_name, "disable_pkg") == 0)
 		ret = __handle_request_disable_pkg(uid, invocation, parameters);
 	else if (g_strcmp0(method_name, "getsize") == 0)
 		ret = __handle_request_getsize(uid, invocation, parameters);
